@@ -2,6 +2,11 @@
 <title>wk</title>
 <head>
 	<style>
+		h1 a {
+			color: #00f;
+			text-decoration: none;
+		}
+
 		article {
 			max-width: 500px;
 			float: left;
@@ -13,8 +18,8 @@
 <?php
 class Page
 {
-	private $slug;
 	private $body;
+	public $slug;
 	public $title;
 	public $last_modified;
 
@@ -80,7 +85,12 @@ function view_not_found($slug)
 function view_render($page)
 { ?>
 	<article>
-		<h1><?=$page->title?></h1>
+		<h1>
+			<a href="?<?=$page->slug?>">
+				<?=$page->title?>
+			</a>
+		</h1>
+
 		<?php foreach($page->IntoHtml() as $elem) {
 			echo $elem;
 		} ?>
