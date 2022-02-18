@@ -3,7 +3,7 @@
 <head>
 	<style>
 		article {
-			width: 300px;
+			max-width: 500px;
 			float: left;
 		}
 	</style>
