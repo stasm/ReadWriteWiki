@@ -35,8 +35,18 @@
 	function into_html($body)
 	{
 		foreach(explode("\n", $body) as $line) {
-			yield "<p>" . htmlentities($line) . "</p>";
+			$line = htmlentities($line);
+			$line = linkify_titles($line);
+			yield "<p>" . $line . "</p>";
 		}
+	}
+
+	function linkify_titles($text)
+	{
+		return preg_replace(
+				"/\b(([A-Z][a-z]+){2,})/",
+				"<a href='?$1'>$1</a>",
+				$text);
 	}
 ?>
 <body>
