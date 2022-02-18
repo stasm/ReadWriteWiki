@@ -11,24 +11,6 @@
 
 <?php
 	$pdo = new PDO('sqlite:./wk.sqlite');
-	$placeholders = implode(',', array_fill(0, count($_GET), '?'));
-	$statement = $pdo->prepare(
-		"SELECT
-			pages.slug as slug,
-			pages.title as title,
-			revisions.body as body,
-			MAX(revisions.time_created) as last_modified
-		FROM
-			revisions
-			JOIN pages ON revisions.page_id = pages.id
-		WHERE
-			pages.slug IN ($placeholders)
-		GROUP BY
-			pages.slug
-		;"
-	);
-
-	$statement->execute(array_keys($_GET));
 ?>
 
 <?php
@@ -50,17 +32,40 @@
 	}
 ?>
 <body>
-	<?php foreach($statement as $page) {
-		$slug = $page["slug"];
-		$title = $page["title"];
-		$body = $page["body"];
-		$last_modified = $page["last_modified"];
+<?php
+	foreach($_GET as $slug => $action) {
+		$statement = $pdo->prepare(
+			"SELECT
+				pages.slug as slug,
+				pages.title as title,
+				revisions.body as body,
+				MAX(revisions.time_created) as last_modified
+			FROM
+				revisions
+				JOIN pages ON revisions.page_id = pages.id
+			WHERE
+				pages.slug = ?
+			GROUP BY
+				pages.slug
+			;"
+		);
 
-		$action = $_GET[$slug];
+		$statement->execute(array($slug));
+		$page = $statement->fetch(PDO::FETCH_OBJ);
+
+		if (!$page) {
+			?>
+				<article>
+					<h1>Page Not Found</h1>
+					<p><?=$slug?> doesn't exist yet. <a href="?<?=$slug?>=edit">Create?</a></p>
+				</article>
+			<?php
+			continue;
+		}
 	?>
 		<article>
-			<h1><?= $title ?></h1>
-			<?php foreach(into_html($body) as $elem) {
+			<h1><?=$page->title?></h1>
+			<?php foreach(into_html($page->body) as $elem) {
 				echo $elem;
 			} ?>
 		</article>
