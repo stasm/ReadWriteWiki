@@ -8,31 +8,38 @@
 		}
 	</style>
 </head>
+<body>
 
 <?php
-	$pdo = new PDO('sqlite:./wk.sqlite');
-?>
+class Page
+{
+	private $slug;
+	private $body;
+	public $title;
+	public $last_modified;
 
-<?php
-	function into_html($body)
+	public function IntoHtml()
 	{
-		foreach(explode("\n", $body) as $line) {
+		foreach(explode("\n", $this->body) as $line) {
 			$line = htmlentities($line);
-			$line = linkify_titles($line);
+			$line = $this->LinkifyTitles($line);
 			yield "<p>" . $line . "</p>";
 		}
 	}
 
-	function linkify_titles($text)
+	private function LinkifyTitles($text)
 	{
 		return preg_replace(
 				"/\b(([A-Z][a-z]+){2,})/",
 				"<a href='?$1'>$1</a>",
 				$text);
 	}
+}
 ?>
-<body>
+
 <?php
+	$pdo = new PDO('sqlite:./wk.sqlite');
+
 	foreach($_GET as $slug => $action) {
 		$statement = $pdo->prepare(
 			"SELECT
@@ -51,7 +58,8 @@
 		);
 
 		$statement->execute(array($slug));
-		$page = $statement->fetch(PDO::FETCH_OBJ);
+		$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
+		$page = $statement->fetch();
 
 		if (!$page) {
 			?>
@@ -65,7 +73,7 @@
 	?>
 		<article>
 			<h1><?=$page->title?></h1>
-			<?php foreach(into_html($page->body) as $elem) {
+			<?php foreach($page->IntoHtml() as $elem) {
 				echo $elem;
 			} ?>
 		</article>
