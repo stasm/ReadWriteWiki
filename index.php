@@ -79,7 +79,8 @@ class Page
 			}
 
 			$line = htmlentities($line);
-			$line = $this->LinkifyTitles($line);
+			$line = $this->Strongify($line);
+			$line = $this->Linkify($line);
 			yield "<p>" . $line . "</p>";
 		}
 
@@ -90,11 +91,19 @@ class Page
 
 	}
 
-	private function LinkifyTitles($text)
+	private function Linkify($text)
 	{
 		return preg_replace(
 				"/\b(([[:upper:]][[:lower:]]+){2,})/",
 				"<a href='?$1'>$1</a>",
+				$text);
+	}
+
+	private function Strongify($text)
+	{
+		return preg_replace(
+				"/\b__(.+?)__\b/",
+				"<strong>$1</strong>",
 				$text);
 	}
 }
