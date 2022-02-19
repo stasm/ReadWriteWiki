@@ -37,6 +37,9 @@ class Page
 	public function IntoHtml()
 	{
 		foreach(explode("\n", $this->body) as $line) {
+			if (!$line) {
+				continue;
+			}
 			$line = htmlentities($line);
 			$line = $this->LinkifyTitles($line);
 			yield "<p>" . $line . "</p>";
