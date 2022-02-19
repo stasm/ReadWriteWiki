@@ -19,6 +19,7 @@
 		}
 
 		footer {
+			font-style: italic;
 			font-size: 80%;
 		}
 	</style>
@@ -140,9 +141,10 @@ function render_page($page)
 	<?php endforeach ?>
 
 		<footer>
-			last modified: <?=$page->last_modified->format("F j, Y")?><br>
-			history, edit,
-			<a href="?<?=$page->slug?>=refs">what links here?</a>
+			modified: <?=$page->last_modified->format("F j, Y")?><br>
+			<a href="?<?=$page->slug?>=hist">history</a>
+			<a href="?<?=$page->slug?>=edit">edit</a>
+			<a href="?<?=$page->slug?>=refs">backlinks</a>
 		</footer>
 	</article>
 <?php }
