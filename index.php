@@ -36,6 +36,14 @@
 <body>
 
 <?php
+const PAGE_TITLE = "/\b(([[:upper:]][[:lower:]]+){2,})\b/";
+
+function is_valid_title($text)
+{
+	preg_match(PAGE_TITLE, $text, $matches);
+	return $matches && $matches[0] == $text;
+}
+
 class Page
 {
 	public $slug;
@@ -100,7 +108,7 @@ class Page
 	private function Linkify($text)
 	{
 		return preg_replace(
-				"/\b(([[:upper:]][[:lower:]]+){2,})/",
+				PAGE_TITLE,
 				"<a href='?$1'>$1</a>",
 				$text);
 	}
@@ -213,6 +221,10 @@ function render_refs($page, $references)
 <?php }
 
 foreach($_GET as $slug => $action) {
+	if (!is_valid_title($slug)) {
+		die("Not a valid page");
+	}
+
 	switch ($action) {
 		case "edit":
 			break;
