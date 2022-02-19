@@ -33,7 +33,6 @@
 		}
 	</style>
 </head>
-<body>
 
 <?php
 const PAGE_TITLE = "/\b(([[:upper:]][[:lower:]]+){2,})\b/";
@@ -121,9 +120,6 @@ class Page
 				$text);
 	}
 }
-?>
-
-<?php
 
 function view_read($slug)
 {
@@ -144,6 +140,62 @@ function view_read($slug)
 		render_page($page);
 	}
 }
+
+function view_refs($slug)
+{
+	$pdo = new PDO('sqlite:./wk.sqlite');
+	$statement = $pdo->prepare("
+		SELECT slug
+		FROM pages
+		WHERE slug = ?
+	;");
+	$statement->execute(array($slug));
+	$page = $statement->fetch(PDO::FETCH_OBJ);
+
+	if (!$page) {
+		render_not_found($slug);
+		return;
+	}
+
+	$statement = $pdo->prepare("
+		SELECT slug, body
+		FROM pages
+		WHERE body LIKE ?
+	;");
+
+	$statement->execute(array("%" . $slug . "%"));
+	$references = $statement->fetchAll(PDO::FETCH_OBJ);
+	render_refs($page, $references);
+}
+
+?>
+
+<body>
+<?php
+
+foreach($_GET as $slug => $action) {
+	if (!is_valid_title($slug)) {
+		die("Not a valid page");
+	}
+
+	switch ($action) {
+		case "edit":
+			break;
+		case "hist":
+			break;
+		case "refs":
+			view_refs($slug);
+			break;
+		case "read":
+		default:
+			view_read($slug);
+	}
+}
+
+?>
+</body>
+
+<?php // Rendering templates
 
 function render_not_found($slug)
 { ?>
@@ -176,33 +228,6 @@ function render_page($page)
 	</article>
 <?php }
 
-function view_refs($slug)
-{
-	$pdo = new PDO('sqlite:./wk.sqlite');
-	$statement = $pdo->prepare("
-		SELECT slug
-		FROM pages
-		WHERE slug = ?
-	;");
-	$statement->execute(array($slug));
-	$page = $statement->fetch(PDO::FETCH_OBJ);
-
-	if (!$page) {
-		render_not_found($slug);
-		return;
-	}
-
-	$statement = $pdo->prepare("
-		SELECT slug, body
-		FROM pages
-		WHERE body LIKE ?
-	;");
-
-	$statement->execute(array("%" . $slug . "%"));
-	$references = $statement->fetchAll(PDO::FETCH_OBJ);
-	render_refs($page, $references);
-}
-
 function render_refs($page, $references)
 { ?>
 	<article>
@@ -220,24 +245,4 @@ function render_refs($page, $references)
 	</article>
 <?php }
 
-foreach($_GET as $slug => $action) {
-	if (!is_valid_title($slug)) {
-		die("Not a valid page");
-	}
-
-	switch ($action) {
-		case "edit":
-			break;
-		case "hist":
-			break;
-		case "refs":
-			view_refs($slug);
-			break;
-		case "read":
-		default:
-			view_read($slug);
-	}
-}
-
 ?>
-</body>
