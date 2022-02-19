@@ -2,15 +2,21 @@
 <title>wk</title>
 <head>
 	<style>
+		body {
+			display: flex;
+			align-items: flex-start;
+			gap: 15px;
+		}
+
 		h1 a {
 			color: blue;
 			text-decoration: none;
 		}
 
 		article {
+			box-sizing: border-box;
+			min-width: 300px;
 			max-width: 500px;
-			float: left;
-			margin: 15px;
 			padding: 15px;
 		}
 
@@ -18,12 +24,12 @@
 			padding-left: 1em;
 		}
 
-		footer {
-			font-size: 80%;
-		}
-
 		.meta {
 			font-style: italic;
+		}
+
+		footer {
+			font-size: 80%;
 		}
 	</style>
 </head>
