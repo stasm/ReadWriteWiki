@@ -10,6 +10,12 @@
 		article {
 			max-width: 500px;
 			float: left;
+			margin: 15px;
+			padding: 15px;
+		}
+
+		ul {
+			padding-left: 1em;
 		}
 
 		footer {
@@ -36,14 +42,48 @@ class Page
 
 	public function IntoHtml()
 	{
+		$list_level = 0;
 		foreach(explode("\n", $this->body) as $line) {
 			if (!$line) {
 				continue;
 			}
+
+			if (str_starts_with($line, "---")) {
+				if ($list_level > 0) {
+					$list_level = 0;
+					yield "</ul>";
+				}
+
+				yield "<hr>";
+				continue;
+			}
+
+			if (str_starts_with($line, "*")) {
+				if ($list_level == 0) {
+					$list_level += 1;
+					yield "<ul>";
+				}
+
+				$line = substr($line, 1);
+				yield "<li>" . $line . "</li>";
+				continue;
+			}
+
+			if ($list_level > 0) {
+				$list_level = 0;
+				yield "</ul>";
+			}
+
 			$line = htmlentities($line);
 			$line = $this->LinkifyTitles($line);
 			yield "<p>" . $line . "</p>";
 		}
+
+		if ($list_level > 0) {
+			$list_level = 0;
+			yield "</ul>";
+		}
+
 	}
 
 	private function LinkifyTitles($text)
