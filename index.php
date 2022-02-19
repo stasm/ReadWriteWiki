@@ -51,21 +51,11 @@ class Page
 function view_read($slug)
 {
 	$pdo = new PDO('sqlite:./wk.sqlite');
-	$statement = $pdo->prepare(
-		"SELECT
-			pages.slug as slug,
-			pages.title as title,
-			revisions.body as body,
-			MAX(revisions.time_created) as last_modified
-		FROM
-			revisions
-			JOIN pages ON revisions.page_id = pages.id
-		WHERE
-			pages.slug = ?
-		GROUP BY
-			pages.slug
-		;"
-	);
+	$statement = $pdo->prepare("
+		SELECT slug, title, body, last_modified
+		FROM pages
+		WHERE pages.slug = ?
+	;");
 
 	$statement->execute(array($slug));
 	$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
@@ -108,16 +98,11 @@ function render_page($page)
 function view_refs($slug)
 {
 	$pdo = new PDO('sqlite:./wk.sqlite');
-	$statement = $pdo->prepare(
-		"SELECT
-			pages.slug as slug,
-			pages.title as title
-		FROM
-			pages
-		WHERE
-			slug = ?
-		;"
-	);
+	$statement = $pdo->prepare("
+		SELECT slug
+		FROM pages
+		WHERE slug = ?
+	;");
 	$statement->execute(array($slug));
 	$page = $statement->fetch(PDO::FETCH_OBJ);
 
@@ -126,21 +111,11 @@ function view_refs($slug)
 		return;
 	}
 
-	$statement = $pdo->prepare(
-		"SELECT
-			pages.slug as slug,
-			pages.title as title,
-			revisions.body as body,
-			MAX(revisions.time_created) as last_modified
-		FROM
-			revisions
-			JOIN pages ON revisions.page_id = pages.id
-		GROUP BY
-			pages.slug
-		HAVING
-			revisions.body LIKE ?
-		;"
-	);
+	$statement = $pdo->prepare("
+		SELECT slug, body
+		FROM pages
+		WHERE body LIKE ?
+	;");
 
 	$statement->execute(array("%" . $slug . "%"));
 	$references = $statement->fetchAll(PDO::FETCH_OBJ);
@@ -151,13 +126,13 @@ function render_refs($page, $references)
 { ?>
 	<article>
 		<h1>
-			What links to <a href="?<?=$page->slug?>"><?=$page->title?></a>?
+			What links to <a href="?<?=$page->slug?>"><?=$page->slug?></a>?
 		</h1>
 
 		<ul>
 		<?php foreach ($references as $reference): ?>
 			<li>
-				<a href="?<?=$reference->slug?>"><?=$reference->title?></a>
+				<a href="?<?=$reference->slug?>"><?=$reference->slug?></a>
 			</li>
 		<?php endforeach ?>
 		</ul>
