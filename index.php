@@ -238,7 +238,7 @@ function render_head()
 
 			article {
 				box-sizing: border-box;
-				min-width: 300px;
+				min-width: min(calc(100vw - 16px), 500px);
 				max-width: 500px;
 				padding: 15px;
 			}
@@ -303,7 +303,8 @@ function render_page($page)
 function render_edit($page)
 { ?>
 	<article>
-		<h1>
+		<h1 class="meta">
+			Edit
 			<a href="?<?=$page->slug?>">
 				<?=$page->title?>
 			</a>
