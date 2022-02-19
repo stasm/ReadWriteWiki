@@ -1,41 +1,6 @@
-<!doctype html>
-<title>wk</title>
-<head>
-	<style>
-		body {
-			display: flex;
-			align-items: flex-start;
-			gap: 15px;
-		}
-
-		h1 a {
-			color: blue;
-			text-decoration: none;
-		}
-
-		article {
-			box-sizing: border-box;
-			min-width: 300px;
-			max-width: 500px;
-			padding: 15px;
-		}
-
-		ul {
-			padding-left: 1em;
-		}
-
-		.meta {
-			font-style: italic;
-		}
-
-		footer {
-			font-size: 80%;
-		}
-	</style>
-</head>
-
 <?php
-const PAGE_TITLE = "/\b(([[:upper:]][[:lower:]]+){2,})\b/";
+const PAGE_TITLE = '/\b(([[:upper:]][[:lower:]]+){2,})\b/';
+const BEFORE_UPPER = '/(?=[[:upper:]])/';
 
 function is_valid_title($text)
 {
@@ -43,17 +8,28 @@ function is_valid_title($text)
 	return $matches && $matches[0] == $text;
 }
 
-class Page
+class NewPage
 {
 	public $slug;
 	public $title;
-	public $last_modified;
+	public $body = '';
 
-	private $body;
+	public function __construct($slug)
+	{
+		$words = preg_split(BEFORE_UPPER, $slug);
+		$this->title = implode(' ', $words);
+		$this->slug = $slug;
+	}
+}
+
+class Page extends NewPage
+{
+	public $last_modified;
 	private $time_modified;
 
 	public function __construct()
 	{
+		parent::__construct($this->slug);
 		$this->last_modified = DateTime::createFromFormat('U', $this->time_modified);
 	}
 
@@ -125,7 +101,7 @@ function view_read($slug)
 {
 	$pdo = new PDO('sqlite:./wk.sqlite');
 	$statement = $pdo->prepare("
-		SELECT slug, title, body, time_modified
+		SELECT slug, body, time_modified
 		FROM pages
 		WHERE pages.slug = ?
 	;");
@@ -138,6 +114,27 @@ function view_read($slug)
 		render_not_found($slug);
 	} else {
 		render_page($page);
+	}
+}
+
+function view_edit($slug)
+{
+	$pdo = new PDO('sqlite:./wk.sqlite');
+	$statement = $pdo->prepare("
+		SELECT slug, body, time_modified
+		FROM pages
+		WHERE pages.slug = ?
+	;");
+
+	$statement->execute(array($slug));
+	$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
+	$page = $statement->fetch();
+
+	if (!$page) {
+		$page = new NewPage($slug);
+		render_edit($page);
+	} else {
+		render_edit($page);
 	}
 }
 
@@ -168,34 +165,103 @@ function view_refs($slug)
 	render_refs($page, $references);
 }
 
-?>
+switch (strtoupper($_SERVER['REQUEST_METHOD'])) {
+case 'GET':
+	render_head();
+	foreach($_GET as $slug => $action) {
+		if (!is_valid_title($slug)) {
+			die("{$slug} is not a valid page title.");
+		}
 
-<body>
-<?php
+		switch ($action) {
+			case "edit":
+				view_edit($slug);
+			case "hist":
+				break;
+			case "refs":
+				view_refs($slug);
+				break;
+			case "read":
+			default:
+				view_read($slug);
+		}
+	}
+	render_end();
+	break;
+case 'POST':
+	// TODO Validate
+	// TODO CSRF
+	$slug = $_POST['slug'];
+	$body = $_POST['body'];
 
-foreach($_GET as $slug => $action) {
-	if (!is_valid_title($slug)) {
-		die("Not a valid page");
+	$pdo = new PDO('sqlite:./wk.sqlite');
+	$statement = $pdo->prepare("
+		INSERT INTO REVISIONS (page_id, body, time_created)
+		VALUES (
+			(SELECT id FROM pages WHERE slug = ?),
+			?, ?
+		)
+	;");
+	$success = $statement->execute(array($slug, $body, date('U')));
+	if ($success) {
+		header("Location: ?{$slug}", true, 303);
+		exit;
 	}
 
-	switch ($action) {
-		case "edit":
-			break;
-		case "hist":
-			break;
-		case "refs":
-			view_refs($slug);
-			break;
-		case "read":
-		default:
-			view_read($slug);
-	}
+	die("Unable to create a new revision of {$slug}.");
 }
 
-?>
-</body>
+// Rendering templates
 
-<?php // Rendering templates
+function render_head()
+{ ?>
+	<!doctype html>
+	<title>wk</title>
+	<head>
+		<style>
+			body {
+				display: flex;
+				align-items: flex-start;
+				gap: 15px;
+			}
+
+			h1 a {
+				color: blue;
+				text-decoration: none;
+			}
+
+			article {
+				box-sizing: border-box;
+				min-width: 300px;
+				max-width: 500px;
+				padding: 15px;
+			}
+
+			ul {
+				padding-left: 1em;
+			}
+
+			.meta {
+				font-style: italic;
+			}
+
+			footer {
+				font-size: 80%;
+			}
+
+			textarea {
+				width: 460px;
+				height: 300px;
+				background: cornsilk;
+			}
+		</style>
+	</head>
+<?php }
+
+function render_end()
+{ ?>
+	</body>
+<?php }
 
 function render_not_found($slug)
 { ?>
@@ -228,6 +294,23 @@ function render_page($page)
 	</article>
 <?php }
 
+function render_edit($page)
+{ ?>
+	<article>
+		<h1>
+			<a href="?<?=$page->slug?>">
+				<?=$page->title?>
+			</a>
+		</h1>
+
+		<form method="post" action="?">
+			<input type="hidden" name="slug" value="<?=$page->slug?>">
+			<textarea name="body" placeholder="Type here..."><?=$page->body?></textarea>
+			<button type="submit">Save</button>
+		</form>
+	</article>
+<?php }
+
 function render_refs($page, $references)
 { ?>
 	<article>
@@ -244,5 +327,3 @@ function render_refs($page, $references)
 		</ul>
 	</article>
 <?php }
-
-?>
