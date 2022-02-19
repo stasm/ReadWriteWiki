@@ -11,6 +11,10 @@
 			max-width: 500px;
 			float: left;
 		}
+
+		footer {
+			font-size: 70%;
+		}
 	</style>
 </head>
 <body>
@@ -68,13 +72,13 @@ function view_read($slug)
 	$page = $statement->fetch();
 
 	if (!$page) {
-		view_not_found($slug);
+		render_not_found($slug);
 	} else {
-		view_render($page);
+		render_page($page);
 	}
 }
 
-function view_not_found($slug)
+function render_not_found($slug)
 { ?>
 	<article>
 		<h1>Page Not Found</h1>
@@ -82,7 +86,7 @@ function view_not_found($slug)
 	</article>
 <?php }
 
-function view_render($page)
+function render_page($page)
 { ?>
 	<article>
 		<h1>
@@ -91,17 +95,83 @@ function view_render($page)
 			</a>
 		</h1>
 
-		<?php foreach($page->IntoHtml() as $elem) {
-			echo $elem;
-		} ?>
+	<?php foreach($page->IntoHtml() as $elem): ?>
+		<?=$elem?>
+	<?php endforeach ?>
+
+		<footer>
+			<a href="?<?=$page->slug?>=refs">what links here?</a>
+		</footer>
+	</article>
+<?php }
+
+function view_refs($slug)
+{
+	$pdo = new PDO('sqlite:./wk.sqlite');
+	$statement = $pdo->prepare(
+		"SELECT
+			pages.slug as slug,
+			pages.title as title
+		FROM
+			pages
+		WHERE
+			slug = ?
+		;"
+	);
+	$statement->execute(array($slug));
+	$page = $statement->fetch(PDO::FETCH_OBJ);
+
+	if (!$page) {
+		render_not_found($slug);
+		return;
+	}
+
+	$statement = $pdo->prepare(
+		"SELECT
+			pages.slug as slug,
+			pages.title as title,
+			revisions.body as body,
+			MAX(revisions.time_created) as last_modified
+		FROM
+			revisions
+			JOIN pages ON revisions.page_id = pages.id
+		GROUP BY
+			pages.slug
+		HAVING
+			revisions.body LIKE ?
+		;"
+	);
+
+	$statement->execute(array("%" . $slug . "%"));
+	$references = $statement->fetchAll(PDO::FETCH_OBJ);
+	render_refs($page, $references);
+}
+
+function render_refs($page, $references)
+{ ?>
+	<article>
+		<h1>
+			What links to <a href="?<?=$page->slug?>"><?=$page->title?></a>?
+		</h1>
+
+		<ul>
+		<?php foreach ($references as $reference): ?>
+			<li>
+				<a href="?<?=$reference->slug?>"><?=$reference->title?></a>
+			</li>
+		<?php endforeach ?>
+		</ul>
 	</article>
 <?php }
 
 foreach($_GET as $slug => $action) {
 	switch ($action) {
-		case "create":
 		case "edit":
+			break;
+		case "hist":
+			break;
 		case "refs":
+			view_refs($slug);
 			break;
 		case "read":
 		default:
