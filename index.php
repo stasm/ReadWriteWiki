@@ -1,12 +1,7 @@
 <?php
+const MAIN_PAGE = 'HomePage';
 const PAGE_TITLE = '/\b(([[:upper:]][[:lower:]]+){2,})\b/';
 const BEFORE_UPPER = '/(?=[[:upper:]])/';
-
-function is_valid_title($text)
-{
-	preg_match(PAGE_TITLE, $text, $matches);
-	return $matches && $matches[0] == $text;
-}
 
 class NewPage
 {
@@ -26,6 +21,12 @@ class Page extends NewPage
 {
 	public $last_modified;
 	private $time_modified;
+
+	public static function IsValidTitle($text)
+	{
+		preg_match(PAGE_TITLE, $text, $matches);
+		return $matches && $matches[0] == $text;
+	}
 
 	public function __construct()
 	{
@@ -167,9 +168,14 @@ function view_refs($slug)
 
 switch (strtoupper($_SERVER['REQUEST_METHOD'])) {
 case 'GET':
+	if (empty($_GET)) {
+		header('Location: ?' . MAIN_PAGE, true, 303);
+		exit;
+	}
+
 	render_head();
 	foreach($_GET as $slug => $action) {
-		if (!is_valid_title($slug)) {
+		if (!Page::IsValidTitle($slug)) {
 			die("{$slug} is not a valid page title.");
 		}
 
