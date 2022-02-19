@@ -19,8 +19,11 @@
 		}
 
 		footer {
-			font-style: italic;
 			font-size: 80%;
+		}
+
+		.meta {
+			font-style: italic;
 		}
 	</style>
 </head>
@@ -121,7 +124,7 @@ function view_read($slug)
 
 function render_not_found($slug)
 { ?>
-	<article>
+	<article class="meta">
 		<h1>Page Not Found</h1>
 		<p><?=$slug?> doesn't exist yet. <a href="?<?=$slug?>=edit">Create?</a></p>
 	</article>
@@ -140,8 +143,9 @@ function render_page($page)
 		<?=$elem?>
 	<?php endforeach ?>
 
-		<footer>
-			modified: <?=$page->last_modified->format("F j, Y")?><br>
+		<footer class="meta">
+			last modified: <span title="<?=$page->last_modified->format(DateTime::COOKIE)?>"><?=$page->last_modified->format("F j, Y")?></span>
+			<br>
 			<a href="?<?=$page->slug?>=hist">history</a>
 			<a href="?<?=$page->slug?>=edit">edit</a>
 			<a href="?<?=$page->slug?>=refs">backlinks</a>
@@ -179,7 +183,7 @@ function view_refs($slug)
 function render_refs($page, $references)
 { ?>
 	<article>
-		<h1>
+		<h1 class="meta">
 			What links to <a href="?<?=$page->slug?>"><?=$page->slug?></a>?
 		</h1>
 
