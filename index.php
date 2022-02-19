@@ -25,8 +25,15 @@ class Page
 {
 	public $slug;
 	public $title;
+	public $last_modified;
+
 	private $body;
-	private $last_modified;
+	private $time_modified;
+
+	public function __construct()
+	{
+		$this->last_modified = DateTime::createFromFormat('U', $this->time_modified);
+	}
 
 	public function IntoHtml()
 	{
@@ -35,12 +42,6 @@ class Page
 			$line = $this->LinkifyTitles($line);
 			yield "<p>" . $line . "</p>";
 		}
-	}
-
-	public function LastModified()
-	{
-		return DateTime::createFromFormat('U', $this->last_modified);
-
 	}
 
 	private function LinkifyTitles($text)
@@ -59,7 +60,7 @@ function view_read($slug)
 {
 	$pdo = new PDO('sqlite:./wk.sqlite');
 	$statement = $pdo->prepare("
-		SELECT slug, title, body, last_modified
+		SELECT slug, title, body, time_modified
 		FROM pages
 		WHERE pages.slug = ?
 	;");
@@ -97,7 +98,7 @@ function render_page($page)
 	<?php endforeach ?>
 
 		<footer>
-			last modified: <?=$page->LastModified()->format("l, F j, Y")?><br>
+			last modified: <?=$page->last_modified->format("F j, Y")?><br>
 			history, edit,
 			<a href="?<?=$page->slug?>=refs">what links here?</a>
 		</footer>

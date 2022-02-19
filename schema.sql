@@ -6,8 +6,8 @@ CREATE TABLE IF NOT EXISTS "revisions" (
 	"body"	TEXT,
 	"time_created"	INTEGER NOT NULL,
 	"is_cosmetic"	INTEGER,
-	FOREIGN KEY("page_id") REFERENCES "pages"("id"),
-	PRIMARY KEY("id" AUTOINCREMENT)
+	PRIMARY KEY("id" AUTOINCREMENT),
+	FOREIGN KEY("page_id") REFERENCES "pages"("id")
 );
 DROP TABLE IF EXISTS "pages";
 CREATE TABLE IF NOT EXISTS "pages" (
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS "pages" (
 	"title"	TEXT NOT NULL UNIQUE,
 	"slug"	TEXT NOT NULL UNIQUE,
 	"body"	TEXT,
-	"last_modified"	INTEGER,
+	"time_modified"	INTEGER,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
 DROP INDEX IF EXISTS "slugs";
@@ -29,7 +29,7 @@ CREATE TRIGGER update_page_body INSERT ON revisions
 		pages
 	SET
 		body = new.body,
-		last_modified = new.time_created
+		time_modified = new.time_created
 	WHERE
 		id = new.page_id;
   END;
