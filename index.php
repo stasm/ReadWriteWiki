@@ -46,7 +46,7 @@ class Page
 	private function LinkifyTitles($text)
 	{
 		return preg_replace(
-				"/\b(([A-Z][a-z]+){2,})/",
+				"/\b(([[:upper:]][[:lower:]]+){2,})/",
 				"<a href='?$1'>$1</a>",
 				$text);
 	}
