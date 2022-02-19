@@ -13,7 +13,8 @@
 		}
 
 		footer {
-			font-size: 70%;
+			color: #666;
+			font-size: 80%;
 		}
 	</style>
 </head>
@@ -22,10 +23,10 @@
 <?php
 class Page
 {
-	private $body;
 	public $slug;
 	public $title;
-	public $last_modified;
+	private $body;
+	private $last_modified;
 
 	public function IntoHtml()
 	{
@@ -34,6 +35,12 @@ class Page
 			$line = $this->LinkifyTitles($line);
 			yield "<p>" . $line . "</p>";
 		}
+	}
+
+	public function LastModified()
+	{
+		return DateTime::createFromFormat('U', $this->last_modified);
+
 	}
 
 	private function LinkifyTitles($text)
@@ -90,6 +97,8 @@ function render_page($page)
 	<?php endforeach ?>
 
 		<footer>
+			last modified: <?=$page->LastModified()->format("l, F j, Y")?><br>
+			history, edit,
 			<a href="?<?=$page->slug?>=refs">what links here?</a>
 		</footer>
 	</article>
