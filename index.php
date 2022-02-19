@@ -3,7 +3,7 @@
 <head>
 	<style>
 		h1 a {
-			color: #00f;
+			color: blue;
 			text-decoration: none;
 		}
 
@@ -13,7 +13,6 @@
 		}
 
 		footer {
-			color: #666;
 			font-size: 80%;
 		}
 	</style>
