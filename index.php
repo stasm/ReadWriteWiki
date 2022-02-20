@@ -153,6 +153,33 @@ function view_read($slug)
 	}
 }
 
+function view_rev($slug, $rev)
+{
+	$pdo = new PDO('sqlite:./wk.sqlite');
+	$statement = $pdo->prepare("
+		SELECT
+			pages.slug as slug,
+			revisions.body as body,
+			revisions.time_created as time_modified
+		FROM
+			revisions
+			JOIN pages ON revisions.page_id = pages.id
+		WHERE
+			pages.slug = ?
+			AND revisions.id = ?
+	;");
+
+	$statement->execute(array($slug, $rev));
+	$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
+	$page = $statement->fetch();
+
+	if (!$page) {
+		render_not_found($slug, $rev);
+	} else {
+		render_page($page);
+	}
+}
+
 function view_edit($slug)
 {
 	$pdo = new PDO('sqlite:./wk.sqlite');
@@ -212,6 +239,14 @@ case 'GET':
 	foreach($_GET as $slug => $action) {
 		if (!Page::IsValidTitle($slug)) {
 			die("{$slug} is not a valid page title.");
+		}
+
+		if (is_array($action)) {
+			foreach ($action as $rev => $_) {
+				view_rev($slug, $rev);
+			}
+			// Only reading is supported for revisions.
+			continue;
 		}
 
 		switch ($action) {
@@ -325,11 +360,16 @@ function render_end()
 	</body>
 <?php }
 
-function render_not_found($slug)
+function render_not_found($slug, $rev = null)
 { ?>
 	<article class="meta">
+	<?php if ($rev): ?>
+		<h1>Revision Not Found</h1>
+		<p><?=$slug?>[<?=$rev?>] doesn't exist.</p>
+	<?php else: ?>
 		<h1>Page Not Found</h1>
 		<p><?=$slug?> doesn't exist yet. <a href="?<?=$slug?>=edit">Create?</a></p>
+	<?php endif ?>
 	</article>
 <?php }
 
