@@ -348,7 +348,6 @@ function render_head()
 			textarea {
 				width: 460px;
 				height: 300px;
-				background: cornsilk;
 			}
 		</style>
 	</head>
@@ -361,7 +360,7 @@ function render_end()
 
 function render_not_found($slug, $rev = null)
 { ?>
-	<article class="meta">
+	<article class="meta" style="background:mistyrose">
 	<?php if ($rev): ?>
 		<h1>Revision Not Found</h1>
 		<p><?=$slug?>[<?=$rev?>] doesn't exist.</p>
@@ -394,7 +393,7 @@ function render_page($page)
 
 function render_rev($page)
 { ?>
-	<article style="background:honeydew;">
+	<article style="background:honeydew">
 		<h1>
 			<a href="?<?=$page->slug?>">
 				<?=$page->title?>
@@ -412,7 +411,7 @@ function render_rev($page)
 
 function render_edit($page)
 { ?>
-	<article>
+	<article style="background:cornsilk">
 		<h1 class="meta">
 			Edit
 			<a href="?<?=$page->slug?>">
@@ -430,7 +429,7 @@ function render_edit($page)
 
 function render_refs($page, $references)
 { ?>
-	<article>
+	<article style="background:aliceblue">
 		<h1 class="meta">
 			What links to <a href="?<?=$page->slug?>"><?=$page->slug?></a>?
 		</h1>
