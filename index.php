@@ -202,13 +202,19 @@ case 'POST':
 
 	$pdo = new PDO('sqlite:./wk.sqlite');
 	$statement = $pdo->prepare("
-		INSERT INTO REVISIONS (page_id, body, time_created)
-		VALUES (
-			(SELECT id FROM pages WHERE slug = ?),
-			?, ?
-		)
+		UPDATE pages
+		SET
+			body = ?,
+			time_modified = ?,
+			remote_addr = ?
+		WHERE slug = ?
 	;");
-	$success = $statement->execute(array($slug, $body, date('U')));
+	$success = $statement->execute(array(
+		$body,
+		date('U'),
+		$_SERVER['REMOTE_ADDR'],
+		$slug
+	));
 	if ($success) {
 		header("Location: ?{$slug}", true, 303);
 		exit;
