@@ -236,7 +236,7 @@ case 'GET':
 	}
 
 	render_head();
-	foreach($_GET as $slug => $action) {
+	foreach ($_GET as $slug => $action) {
 		if (!Page::IsValidTitle($slug)) {
 			die("{$slug} is not a valid page title.");
 		}
@@ -301,9 +301,21 @@ case 'POST':
 // Rendering templates
 
 function render_head()
-{ ?>
+{
+	$panels = array();
+	foreach ($_GET as $slug => $action) {
+		if (is_array($action)) {
+			$revs = implode(',', array_keys($action));
+			$panels[] = "{$slug}[$revs]";
+		} else if ($action) {
+			$panels[] = "$slug=$action";
+		} else {
+			$panels[] = $slug;
+		}
+	}
+?>
 	<!doctype html>
-	<title>wk</title>
+	<title><?=implode(' & ', $panels)?></title>
 	<head>
 		<style>
 			body {
