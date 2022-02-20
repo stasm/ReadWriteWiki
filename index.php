@@ -154,7 +154,7 @@ function view_read($pdo, $slug)
 	}
 }
 
-function view_rev($pdo, $slug, $rev)
+function view_revision($pdo, $slug, $rev)
 {
 	$statement = $pdo->prepare("
 		SELECT
@@ -176,7 +176,7 @@ function view_rev($pdo, $slug, $rev)
 	if (!$page) {
 		render_not_found($slug, $rev);
 	} else {
-		render_rev($page);
+		render_revision($page);
 	}
 }
 
@@ -200,7 +200,7 @@ function view_edit($pdo, $slug)
 	}
 }
 
-function view_refs($pdo, $slug)
+function view_backlinks($pdo, $slug)
 {
 	$statement = $pdo->prepare("
 		SELECT slug
@@ -223,7 +223,7 @@ function view_refs($pdo, $slug)
 
 	$statement->execute(array("%" . $slug . "%"));
 	$references = $statement->fetchAll(PDO::FETCH_OBJ);
-	render_refs($page, $references);
+	render_backlinks($page, $references);
 }
 
 $pdo = new PDO('sqlite:./' . DB_NAME);
@@ -243,7 +243,7 @@ case 'GET':
 
 		if (is_array($action)) {
 			foreach ($action as $rev => $_) {
-				view_rev($pdo, $slug, $rev);
+				view_revision($pdo, $slug, $rev);
 			}
 			// Only reading is supported for revisions.
 			continue;
@@ -252,10 +252,10 @@ case 'GET':
 		switch ($action) {
 			case "edit":
 				view_edit($pdo, $slug);
-			case "hist":
+			case "history":
 				break;
-			case "refs":
-				view_refs($pdo, $slug);
+			case "backlinks":
+				view_backlinks($pdo, $slug);
 				break;
 			case "read":
 			default:
@@ -396,14 +396,14 @@ function render_page($page)
 
 		<footer class="meta">
 			last modified: <?=$page->last_modified->format(DATETIME_FORMAT)?></a><br>
-			<a href="?<?=$page->slug?>=hist">revisions</a>
-			<a href="?<?=$page->slug?>=refs">backlinks</a>
+			<a href="?<?=$page->slug?>=history">history</a>
+			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=edit">edit</a>
 		</footer>
 	</article>
 <?php }
 
-function render_rev($page)
+function render_revision($page)
 { ?>
 	<article style="background:honeydew">
 		<h1>
@@ -439,7 +439,7 @@ function render_edit($page)
 	</article>
 <?php }
 
-function render_refs($page, $references)
+function render_backlinks($page, $references)
 { ?>
 	<article style="background:aliceblue">
 		<h1 class="meta">
