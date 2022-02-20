@@ -36,16 +36,19 @@ class Page extends NewPage
 
 	public function IntoHtml()
 	{
-		$list_level = 0;
-		foreach(explode("\n", $this->body) as $line) {
-			if (!$line) {
-				continue;
-			}
+		$inside_list = false;
+		$inside_pre = false;
+
+		foreach(explode(PHP_EOL, $this->body) as $line) {
 
 			if (str_starts_with($line, "---")) {
-				if ($list_level > 0) {
-					$list_level = 0;
+				if ($inside_list) {
+					$inside_list = false;
 					yield "</ul>";
+				}
+				if ($inside_pre) {
+					$inside_pre = false;
+					yield "</pre>";
 				}
 
 				yield "<hr>";
@@ -53,8 +56,12 @@ class Page extends NewPage
 			}
 
 			if (str_starts_with($line, "*")) {
-				if ($list_level == 0) {
-					$list_level += 1;
+				if ($inside_pre) {
+					$inside_pre = false;
+					yield "</pre>";
+				}
+				if ($inside_list == false) {
+					$inside_list = true;
 					yield "<ul>";
 				}
 
@@ -63,22 +70,50 @@ class Page extends NewPage
 				continue;
 			}
 
-			if ($list_level > 0) {
-				$list_level = 0;
-				yield "</ul>";
+			if (str_starts_with($line, " ")) {
+				if ($inside_list) {
+					$inside_list = false;
+					yield "</ul>";
+				}
+				if ($inside_pre == false) {
+					$inside_pre = true;
+					yield "<pre>";
+				}
+
+				yield substr($line, 1);
+				continue;
 			}
 
-			$line = htmlentities($line);
-			$line = $this->Strongify($line);
-			$line = $this->Linkify($line);
-			yield "<p>" . $line . "</p>";
+			$line = trim($line);
+			if ($line != '') {
+				if ($inside_list) {
+					$inside_list = false;
+					yield "</ul>";
+				}
+				if ($inside_pre) {
+					$inside_pre = false;
+					yield "</pre>";
+				}
+
+				$line = htmlentities($line);
+				$line = $this->Strongify($line);
+				$line = $this->Linkify($line);
+				yield "<p>" . $line . "</p>";
+				continue;
+			}
+
+			if ($inside_pre) {
+				$inside_pre = false;
+				yield "</pre>";
+			}
 		}
 
-		if ($list_level > 0) {
-			$list_level = 0;
+		if ($inside_list) {
 			yield "</ul>";
 		}
-
+		if ($inside_pre) {
+			yield "</pre>";
+		}
 	}
 
 	private function Linkify($text)
@@ -255,8 +290,17 @@ function render_head()
 				padding: 15px;
 			}
 
-			ul {
+			article ul {
 				padding-left: 1em;
+			}
+
+			article pre {
+				padding: 3px 1px;
+				background: whitesmoke;
+			}
+
+			article a {
+				text-decoration: none;
 			}
 
 			.meta {
@@ -298,9 +342,7 @@ function render_page($page)
 			</a>
 		</h1>
 
-	<?php foreach($page->IntoHtml() as $elem): ?>
-		<?=$elem?>
-	<?php endforeach ?>
+	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
 			last modified: <span title="<?=$page->last_modified->format(DateTime::COOKIE)?>"><?=$page->last_modified->format("F j, Y")?></span>
