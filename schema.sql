@@ -24,7 +24,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "slugs" ON "pages" (
 );
 DROP TRIGGER IF EXISTS "record_page_creation";
 CREATE TRIGGER record_page_creation
-INSERT ON pages 
+AFTER INSERT ON pages 
 BEGIN
     INSERT INTO revisions (
 		page_id,
@@ -40,7 +40,7 @@ BEGIN
 END;
 DROP TRIGGER IF EXISTS "record_page_revision";
 CREATE TRIGGER record_page_revision
-UPDATE ON pages 
+AFTER UPDATE ON pages 
 BEGIN
     INSERT INTO revisions (
 		page_id,

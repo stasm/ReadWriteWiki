@@ -199,23 +199,29 @@ case 'POST':
 	// TODO CSRF
 	$slug = $_POST['slug'];
 	$body = $_POST['body'];
+	$time = date('U');
+	$addr = $_SERVER['REMOTE_ADDR'];
 
 	$pdo = new PDO('sqlite:./wk.sqlite');
 	$statement = $pdo->prepare("
-		UPDATE pages
+		INSERT INTO pages (slug, body, time_modified, remote_addr)
+		VALUES (:slug, :body, :time, :addr)
+		ON CONFLICT (slug) DO UPDATE
 		SET
-			body = ?,
-			time_modified = ?,
-			remote_addr = ?
-		WHERE slug = ?
+			body = :body_up,
+			time_modified = :time_up,
+			remote_addr = :addr_up
 	;");
-	$success = $statement->execute(array(
-		$body,
-		date('U'),
-		$_SERVER['REMOTE_ADDR'],
-		$slug
-	));
-	if ($success) {
+
+	$statement->bindParam('slug', $slug, PDO::PARAM_STR);
+	$statement->bindParam('body', $body, PDO::PARAM_STR);
+	$statement->bindParam('time', $time, PDO::PARAM_INT);
+	$statement->bindParam('addr', $addr, PDO::PARAM_STR);
+	$statement->bindParam('body_up', $body, PDO::PARAM_STR);
+	$statement->bindParam('time_up', $time, PDO::PARAM_INT);
+	$statement->bindParam('addr_up', $addr, PDO::PARAM_STR);
+
+	if ($statement->execute()) {
 		header("Location: ?{$slug}", true, 303);
 		exit;
 	}
