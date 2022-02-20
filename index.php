@@ -3,6 +3,7 @@ const DB_NAME = 'wk.sqlite';
 const MAIN_PAGE = 'HomePage';
 const PAGE_TITLE = '/\b(([[:upper:]][[:lower:]]+){2,})\b/';
 const BEFORE_UPPER = '/(?=[[:upper:]])/';
+const DATETIME_FORMAT = 'Y-m-d H:i:s';
 
 class NewPage
 {
@@ -383,11 +384,10 @@ function render_page($page)
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
-			last modified: <span title="<?=$page->last_modified->format(DateTime::COOKIE)?>"><?=$page->last_modified->format("F j, Y")?></span>
-			<br>
-			<a href="?<?=$page->slug?>=hist">history</a>
-			<a href="?<?=$page->slug?>=edit">edit</a>
+			last modified: <?=$page->last_modified->format(DATETIME_FORMAT)?></a><br>
+			<a href="?<?=$page->slug?>=hist">revisions</a>
 			<a href="?<?=$page->slug?>=refs">backlinks</a>
+			<a href="?<?=$page->slug?>=edit">edit</a>
 		</footer>
 	</article>
 <?php }
@@ -401,13 +401,12 @@ function render_rev($page)
 			</a>
 		</h1>
 
+		<footer class="meta">
+			Viewing revision from <?=$page->last_modified->format(DATETIME_FORMAT)?>.
+		</footer>
+
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
-		<footer class="meta">
-			Viewing revision from <span title="<?=$page->last_modified->format(DateTime::COOKIE)?>"><?=$page->last_modified->format("F j, Y")?></span>
-			<br>
-			<a href="?<?=$page->slug?>=hist">history</a>
-		</footer>
 	</article>
 <?php }
 
