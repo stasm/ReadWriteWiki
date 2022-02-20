@@ -1,4 +1,5 @@
 <?php
+const DB_NAME = 'wk.sqlite';
 const MAIN_PAGE = 'HomePage';
 const PAGE_TITLE = '/\b(([[:upper:]][[:lower:]]+){2,})\b/';
 const BEFORE_UPPER = '/(?=[[:upper:]])/';
@@ -133,9 +134,8 @@ class Page extends NewPage
 	}
 }
 
-function view_read($slug)
+function view_read($pdo, $slug)
 {
-	$pdo = new PDO('sqlite:./wk.sqlite');
 	$statement = $pdo->prepare("
 		SELECT slug, body, time_modified
 		FROM pages
@@ -153,9 +153,8 @@ function view_read($slug)
 	}
 }
 
-function view_rev($slug, $rev)
+function view_rev($pdo, $slug, $rev)
 {
-	$pdo = new PDO('sqlite:./wk.sqlite');
 	$statement = $pdo->prepare("
 		SELECT
 			pages.slug as slug,
@@ -180,9 +179,8 @@ function view_rev($slug, $rev)
 	}
 }
 
-function view_edit($slug)
+function view_edit($pdo, $slug)
 {
-	$pdo = new PDO('sqlite:./wk.sqlite');
 	$statement = $pdo->prepare("
 		SELECT slug, body, time_modified
 		FROM pages
@@ -201,9 +199,8 @@ function view_edit($slug)
 	}
 }
 
-function view_refs($slug)
+function view_refs($pdo, $slug)
 {
-	$pdo = new PDO('sqlite:./wk.sqlite');
 	$statement = $pdo->prepare("
 		SELECT slug
 		FROM pages
@@ -228,6 +225,8 @@ function view_refs($slug)
 	render_refs($page, $references);
 }
 
+$pdo = new PDO('sqlite:./' . DB_NAME);
+
 switch (strtoupper($_SERVER['REQUEST_METHOD'])) {
 case 'GET':
 	if (empty($_GET)) {
@@ -243,7 +242,7 @@ case 'GET':
 
 		if (is_array($action)) {
 			foreach ($action as $rev => $_) {
-				view_rev($slug, $rev);
+				view_rev($pdo, $slug, $rev);
 			}
 			// Only reading is supported for revisions.
 			continue;
@@ -251,15 +250,15 @@ case 'GET':
 
 		switch ($action) {
 			case "edit":
-				view_edit($slug);
+				view_edit($pdo, $slug);
 			case "hist":
 				break;
 			case "refs":
-				view_refs($slug);
+				view_refs($pdo, $slug);
 				break;
 			case "read":
 			default:
-				view_read($slug);
+				view_read($pdo, $slug);
 		}
 	}
 	render_end();
@@ -272,7 +271,6 @@ case 'POST':
 	$time = date('U');
 	$addr = $_SERVER['REMOTE_ADDR'];
 
-	$pdo = new PDO('sqlite:./wk.sqlite');
 	$statement = $pdo->prepare("
 		INSERT INTO pages (slug, body, time_modified, remote_addr)
 		VALUES (:slug, :body, :time, :addr)
