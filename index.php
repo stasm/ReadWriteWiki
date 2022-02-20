@@ -175,7 +175,7 @@ function view_rev($pdo, $slug, $rev)
 	if (!$page) {
 		render_not_found($slug, $rev);
 	} else {
-		render_page($page);
+		render_rev($page);
 	}
 }
 
@@ -388,6 +388,25 @@ function render_page($page)
 			<a href="?<?=$page->slug?>=hist">history</a>
 			<a href="?<?=$page->slug?>=edit">edit</a>
 			<a href="?<?=$page->slug?>=refs">backlinks</a>
+		</footer>
+	</article>
+<?php }
+
+function render_rev($page)
+{ ?>
+	<article style="background:honeydew;">
+		<h1>
+			<a href="?<?=$page->slug?>">
+				<?=$page->title?>
+			</a>
+		</h1>
+
+	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
+
+		<footer class="meta">
+			Viewing revision from <span title="<?=$page->last_modified->format(DateTime::COOKIE)?>"><?=$page->last_modified->format("F j, Y")?></span>
+			<br>
+			<a href="?<?=$page->slug?>=hist">history</a>
 		</footer>
 	</article>
 <?php }
