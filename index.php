@@ -75,7 +75,7 @@ class Page extends NewPage
 		foreach(explode(PHP_EOL, $this->body) as $line) {
 			$line = htmlentities($line);
 
-			if (str_starts_with($line, '---')) {
+			if (starts_with($line, '---')) {
 				if ($inside_list) {
 					$inside_list = false;
 					yield '</ul>';
@@ -89,7 +89,7 @@ class Page extends NewPage
 				continue;
 			}
 
-			if (str_starts_with($line, '*')) {
+			if (starts_with($line, '*')) {
 				if ($inside_pre) {
 					$inside_pre = false;
 					yield '</pre>';
@@ -104,7 +104,7 @@ class Page extends NewPage
 				continue;
 			}
 
-			if (str_starts_with($line, ' ')) {
+			if (starts_with($line, ' ')) {
 				if ($inside_list) {
 					$inside_list = false;
 					yield '</ul>';
@@ -164,6 +164,10 @@ class Page extends NewPage
 				'<strong>$1</strong>',
 				$text);
 	}
+}
+
+function starts_with($string, $prefix) {
+	return substr($string, 0, strlen($prefix)) == $prefix;
 }
 
 function view_read($state, $slug)
