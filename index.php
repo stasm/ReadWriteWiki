@@ -465,11 +465,14 @@ function render_revision($page)
 			</a>
 		</h1>
 
-		<footer class="meta">
-			Viewing revision from <?=$page->modified->format(DATETIME_FORMAT)?>.
-		</footer>
-
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
+
+		<footer class="meta">
+			revision from <?=$page->modified->format(DATETIME_FORMAT)?></a><br>
+			<a href="?<?=$page->slug?>=history">history</a>
+			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
+			<a href="?<?=$page->slug?>">latest</a>
+		</footer>
 
 	</article>
 <?php }
