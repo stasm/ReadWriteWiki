@@ -5,6 +5,19 @@ const PAGE_TITLE = '/\b(([[:upper:]][[:lower:]]+){2,})\b/';
 const BEFORE_UPPER = '/(?=[[:upper:]])/';
 const DATETIME_FORMAT = 'Y-m-d H:i:s';
 
+class State
+{
+	public $revision_created = false;
+
+	public function __construct()
+	{
+		if (isset($_SESSION['revision_created'])) {
+			$this->revision_created = $_SESSION['revision_created'];
+			unset($_SESSION['revision_created']);
+		}
+	}
+}
+
 class Revision
 {
 	public $id;
@@ -150,7 +163,7 @@ class Page extends NewPage
 	}
 }
 
-function view_read($pdo, $slug)
+function view_read($pdo, $slug, $state)
 {
 	$statement = $pdo->prepare('
 		SELECT slug, body, time_modified
@@ -165,7 +178,7 @@ function view_read($pdo, $slug)
 	if (!$page) {
 		render_not_found($slug);
 	} else {
-		render_page($page);
+		render_page($page, $state);
 	}
 }
 
@@ -277,6 +290,8 @@ function view_backlinks($pdo, $slug)
 	render_backlinks($slug, $references);
 }
 
+session_start();
+$state = new State();
 $pdo = new PDO('sqlite:./' . DB_NAME);
 
 switch (strtoupper($_SERVER['REQUEST_METHOD'])) {
@@ -312,7 +327,7 @@ case 'GET':
 				break;
 			case 'read':
 			default:
-				view_read($pdo, $slug);
+				view_read($pdo, $slug, $state);
 		}
 	}
 	render_end();
@@ -344,6 +359,7 @@ case 'POST':
 	$statement->bindParam('addr_up', $addr, PDO::PARAM_STR);
 
 	if ($statement->execute()) {
+		$_SESSION['revision_created'] = true;
 		header("Location: ?$slug", true, 303);
 		exit;
 	}
@@ -436,9 +452,15 @@ function render_not_found($slug, $rev = null)
 	</article>
 <?php }
 
-function render_page($page)
+function render_page($page, $state)
 { ?>
 	<article>
+	<?php if ($state->revision_created): ?>
+		<header class="meta" style="background:cornsilk">
+			Page updated successfully.
+		</header>
+	<?php endif ?>
+
 		<h1>
 			<a href="?<?=$page->slug?>">
 				<?=$page->title?>
