@@ -7,10 +7,13 @@ const DATETIME_FORMAT = 'Y-m-d H:i:s';
 
 class State
 {
+	public $pdo;
 	public $revision_created = false;
 
 	public function __construct()
 	{
+		$this->pdo = new PDO('sqlite:./' . DB_NAME);
+
 		if (isset($_SESSION['revision_created'])) {
 			$this->revision_created = $_SESSION['revision_created'];
 			unset($_SESSION['revision_created']);
@@ -163,9 +166,9 @@ class Page extends NewPage
 	}
 }
 
-function view_read($pdo, $slug, $state)
+function view_read($state, $slug)
 {
-	$statement = $pdo->prepare('
+	$statement = $state->pdo->prepare('
 		SELECT slug, body, time_modified
 		FROM pages
 		WHERE pages.slug = ?
@@ -182,9 +185,9 @@ function view_read($pdo, $slug, $state)
 	}
 }
 
-function view_revision($pdo, $slug, $rev)
+function view_revision($state, $slug, $rev)
 {
-	$statement = $pdo->prepare('
+	$statement = $state->pdo->prepare('
 		SELECT
 			pages.slug as slug,
 			revisions.body as body,
@@ -208,9 +211,9 @@ function view_revision($pdo, $slug, $rev)
 	}
 }
 
-function view_edit($pdo, $slug)
+function view_edit($state, $slug)
 {
-	$statement = $pdo->prepare('
+	$statement = $state->pdo->prepare('
 		SELECT slug, body, time_modified
 		FROM pages
 		WHERE pages.slug = ?
@@ -228,9 +231,9 @@ function view_edit($pdo, $slug)
 	}
 }
 
-function view_history($pdo, $slug)
+function view_history($state, $slug)
 {
-	$statement = $pdo->prepare('
+	$statement = $state->pdo->prepare('
 		SELECT slug
 		FROM pages
 		WHERE slug = ?
@@ -243,7 +246,7 @@ function view_history($pdo, $slug)
 		return;
 	}
 
-	$statement = $pdo->prepare('
+	$statement = $state->pdo->prepare('
 		SELECT
 			revisions.id as id,
 			revisions.time_created as time_created,
@@ -264,9 +267,9 @@ function view_history($pdo, $slug)
 	render_history($slug, $revisions);
 }
 
-function view_backlinks($pdo, $slug)
+function view_backlinks($state, $slug)
 {
-	$statement = $pdo->prepare('
+	$statement = $state->pdo->prepare('
 		SELECT slug
 		FROM pages
 		WHERE slug = ?
@@ -279,7 +282,7 @@ function view_backlinks($pdo, $slug)
 		return;
 	}
 
-	$statement = $pdo->prepare('
+	$statement = $state->pdo->prepare('
 		SELECT slug, body
 		FROM pages
 		WHERE body LIKE ?
@@ -292,7 +295,6 @@ function view_backlinks($pdo, $slug)
 
 session_start();
 $state = new State();
-$pdo = new PDO('sqlite:./' . DB_NAME);
 
 switch (strtoupper($_SERVER['REQUEST_METHOD'])) {
 case 'GET':
@@ -309,7 +311,7 @@ case 'GET':
 
 		if (is_array($action)) {
 			foreach ($action as $rev => $_) {
-				view_revision($pdo, $slug, $rev);
+				view_revision($state, $slug, $rev);
 			}
 			// Only reading is supported for revisions.
 			continue;
@@ -317,17 +319,17 @@ case 'GET':
 
 		switch ($action) {
 			case 'edit':
-				view_edit($pdo, $slug);
+				view_edit($state, $slug);
 				break;
 			case 'history':
-				view_history($pdo, $slug);
+				view_history($state, $slug);
 				break;
 			case 'backlinks':
-				view_backlinks($pdo, $slug);
+				view_backlinks($state, $slug);
 				break;
 			case 'read':
 			default:
-				view_read($pdo, $slug, $state);
+				view_read($state, $slug);
 		}
 	}
 	render_end();
@@ -340,7 +342,7 @@ case 'POST':
 	$time = date('U');
 	$addr = $_SERVER['REMOTE_ADDR'];
 
-	$statement = $pdo->prepare('
+	$statement = $state->pdo->prepare('
 		INSERT INTO pages (slug, body, time_modified, remote_addr)
 		VALUES (:slug, :body, :time, :addr)
 		ON CONFLICT (slug) DO UPDATE
