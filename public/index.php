@@ -192,16 +192,9 @@ function view_read($state, $slug)
 function view_revision($state, $slug, $rev)
 {
 	$statement = $state->pdo->prepare('
-		SELECT
-			pages.slug as slug,
-			revisions.body as body,
-			revisions.time_created as time_modified
-		FROM
-			revisions
-			JOIN pages ON revisions.page_id = pages.id
-		WHERE
-			pages.slug = ?
-			AND revisions.id = ?
+		SELECT slug, body, time_created as time_modified
+		FROM revisions
+		WHERE slug = ? AND id = ?
 	;');
 
 	$statement->execute(array($slug, $rev));
@@ -251,18 +244,10 @@ function view_history($state, $slug)
 	}
 
 	$statement = $state->pdo->prepare('
-		SELECT
-			revisions.id as id,
-			revisions.time_created as time_created,
-			revisions.remote_addr as remote_addr,
-			LENGTH(revisions.body) as size
-		FROM
-			revisions
-			JOIN pages ON revisions.page_id = pages.id
-		WHERE
-			pages.slug = ?
-		ORDER BY
-			revisions.time_created DESC
+		SELECT id, time_created, remote_addr, LENGTH(body) as size
+		FROM revisions
+		WHERE slug = ?
+		ORDER BY time_created DESC
 	;');
 
 	$statement->execute(array($slug));
