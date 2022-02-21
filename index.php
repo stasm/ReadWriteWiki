@@ -58,43 +58,43 @@ class Page extends NewPage
 
 		foreach(explode(PHP_EOL, $this->body) as $line) {
 
-			if (str_starts_with($line, "---")) {
+			if (str_starts_with($line, '---')) {
 				if ($inside_list) {
 					$inside_list = false;
-					yield "</ul>";
+					yield '</ul>';
 				}
 				if ($inside_pre) {
 					$inside_pre = false;
-					yield "</pre>";
+					yield '</pre>';
 				}
 
-				yield "<hr>";
+				yield '<hr>';
 				continue;
 			}
 
-			if (str_starts_with($line, "*")) {
+			if (str_starts_with($line, '*')) {
 				if ($inside_pre) {
 					$inside_pre = false;
-					yield "</pre>";
+					yield '</pre>';
 				}
 				if ($inside_list == false) {
 					$inside_list = true;
-					yield "<ul>";
+					yield '<ul>';
 				}
 
 				$line = substr($line, 1);
-				yield "<li>" . $line . "</li>";
+				yield '<li>' . $line . '</li>';
 				continue;
 			}
 
-			if (str_starts_with($line, " ")) {
+			if (str_starts_with($line, ' ')) {
 				if ($inside_list) {
 					$inside_list = false;
-					yield "</ul>";
+					yield '</ul>';
 				}
 				if ($inside_pre == false) {
 					$inside_pre = true;
-					yield "<pre>";
+					yield '<pre>';
 				}
 
 				yield substr($line, 1);
@@ -105,31 +105,31 @@ class Page extends NewPage
 			if ($line != '') {
 				if ($inside_list) {
 					$inside_list = false;
-					yield "</ul>";
+					yield '</ul>';
 				}
 				if ($inside_pre) {
 					$inside_pre = false;
-					yield "</pre>";
+					yield '</pre>';
 				}
 
 				$line = htmlentities($line);
 				$line = $this->Strongify($line);
 				$line = $this->Linkify($line);
-				yield "<p>" . $line . "</p>";
+				yield '<p>' . $line . '</p>';
 				continue;
 			}
 
 			if ($inside_pre) {
 				$inside_pre = false;
-				yield "</pre>";
+				yield '</pre>';
 			}
 		}
 
 		if ($inside_list) {
-			yield "</ul>";
+			yield '</ul>';
 		}
 		if ($inside_pre) {
-			yield "</pre>";
+			yield '</pre>';
 		}
 	}
 
@@ -137,26 +137,26 @@ class Page extends NewPage
 	{
 		return preg_replace(
 				PAGE_TITLE,
-				"<a href='?$1'>$1</a>",
+				'<a href="?$1">$1</a>',
 				$text);
 	}
 
 	private function Strongify($text)
 	{
 		return preg_replace(
-				"/\b__(.+?)__\b/",
-				"<strong>$1</strong>",
+				'/\b__(.+?)__\b/',
+				'<strong>$1</strong>',
 				$text);
 	}
 }
 
 function view_read($pdo, $slug)
 {
-	$statement = $pdo->prepare("
+	$statement = $pdo->prepare('
 		SELECT slug, body, time_modified
 		FROM pages
 		WHERE pages.slug = ?
-	;");
+	;');
 
 	$statement->execute(array($slug));
 	$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
@@ -171,7 +171,7 @@ function view_read($pdo, $slug)
 
 function view_revision($pdo, $slug, $rev)
 {
-	$statement = $pdo->prepare("
+	$statement = $pdo->prepare('
 		SELECT
 			pages.slug as slug,
 			revisions.body as body,
@@ -182,7 +182,7 @@ function view_revision($pdo, $slug, $rev)
 		WHERE
 			pages.slug = ?
 			AND revisions.id = ?
-	;");
+	;');
 
 	$statement->execute(array($slug, $rev));
 	$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
@@ -197,11 +197,11 @@ function view_revision($pdo, $slug, $rev)
 
 function view_edit($pdo, $slug)
 {
-	$statement = $pdo->prepare("
+	$statement = $pdo->prepare('
 		SELECT slug, body, time_modified
 		FROM pages
 		WHERE pages.slug = ?
-	;");
+	;');
 
 	$statement->execute(array($slug));
 	$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
@@ -217,11 +217,11 @@ function view_edit($pdo, $slug)
 
 function view_history($pdo, $slug)
 {
-	$statement = $pdo->prepare("
+	$statement = $pdo->prepare('
 		SELECT slug
 		FROM pages
 		WHERE slug = ?
-	;");
+	;');
 	$statement->execute(array($slug));
 	$page = $statement->fetch(PDO::FETCH_OBJ);
 
@@ -230,7 +230,7 @@ function view_history($pdo, $slug)
 		return;
 	}
 
-	$statement = $pdo->prepare("
+	$statement = $pdo->prepare('
 		SELECT
 			revisions.id as id,
 			revisions.time_created as time_created,
@@ -243,7 +243,7 @@ function view_history($pdo, $slug)
 			pages.slug = ?
 		ORDER BY
 			revisions.time_created DESC
-	;");
+	;');
 
 	$statement->execute(array($slug));
 	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
@@ -253,11 +253,11 @@ function view_history($pdo, $slug)
 
 function view_backlinks($pdo, $slug)
 {
-	$statement = $pdo->prepare("
+	$statement = $pdo->prepare('
 		SELECT slug
 		FROM pages
 		WHERE slug = ?
-	;");
+	;');
 	$statement->execute(array($slug));
 	$page = $statement->fetch(PDO::FETCH_OBJ);
 
@@ -266,13 +266,13 @@ function view_backlinks($pdo, $slug)
 		return;
 	}
 
-	$statement = $pdo->prepare("
+	$statement = $pdo->prepare('
 		SELECT slug, body
 		FROM pages
 		WHERE body LIKE ?
-	;");
+	;');
 
-	$statement->execute(array("%" . $slug . "%"));
+	$statement->execute(array("%$slug%"));
 	$references = $statement->fetchAll(PDO::FETCH_OBJ);
 	render_backlinks($slug, $references);
 }
@@ -289,7 +289,7 @@ case 'GET':
 	render_head();
 	foreach ($_GET as $slug => $action) {
 		if (!Page::IsValidTitle($slug)) {
-			die("{$slug} is not a valid page title.");
+			die("$slug is not a valid page title.");
 		}
 
 		if (is_array($action)) {
@@ -301,16 +301,16 @@ case 'GET':
 		}
 
 		switch ($action) {
-			case "edit":
+			case 'edit':
 				view_edit($pdo, $slug);
 				break;
-			case "history":
+			case 'history':
 				view_history($pdo, $slug);
 				break;
-			case "backlinks":
+			case 'backlinks':
 				view_backlinks($pdo, $slug);
 				break;
-			case "read":
+			case 'read':
 			default:
 				view_read($pdo, $slug);
 		}
@@ -325,7 +325,7 @@ case 'POST':
 	$time = date('U');
 	$addr = $_SERVER['REMOTE_ADDR'];
 
-	$statement = $pdo->prepare("
+	$statement = $pdo->prepare('
 		INSERT INTO pages (slug, body, time_modified, remote_addr)
 		VALUES (:slug, :body, :time, :addr)
 		ON CONFLICT (slug) DO UPDATE
@@ -333,7 +333,7 @@ case 'POST':
 			body = :body_up,
 			time_modified = :time_up,
 			remote_addr = :addr_up
-	;");
+	;');
 
 	$statement->bindParam('slug', $slug, PDO::PARAM_STR);
 	$statement->bindParam('body', $body, PDO::PARAM_STR);
@@ -344,11 +344,11 @@ case 'POST':
 	$statement->bindParam('addr_up', $addr, PDO::PARAM_STR);
 
 	if ($statement->execute()) {
-		header("Location: ?{$slug}", true, 303);
+		header("Location: ?$slug", true, 303);
 		exit;
 	}
 
-	die("Unable to create a new revision of {$slug}.");
+	die("Unable to create a new revision of $slug.");
 }
 
 // Rendering templates
