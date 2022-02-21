@@ -1,5 +1,5 @@
 <?php
-const DB_NAME = 'wk.sqlite';
+const DB_NAME = '../wiki.db';
 const MAIN_PAGE = 'HomePage';
 const PAGE_TITLE = '/\b(([[:upper:]][[:lower:]]+){2,})\b/';
 const BEFORE_UPPER = '/(?=[[:upper:]])/';
