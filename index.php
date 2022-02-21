@@ -57,6 +57,7 @@ class Page extends NewPage
 		$inside_pre = false;
 
 		foreach(explode(PHP_EOL, $this->body) as $line) {
+			$line = htmlentities($line);
 
 			if (str_starts_with($line, '---')) {
 				if ($inside_list) {
@@ -112,7 +113,6 @@ class Page extends NewPage
 					yield '</pre>';
 				}
 
-				$line = htmlentities($line);
 				$line = $this->Strongify($line);
 				$line = $this->Linkify($line);
 				yield '<p>' . $line . '</p>';
