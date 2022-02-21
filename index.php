@@ -5,6 +5,21 @@ const PAGE_TITLE = '/\b(([[:upper:]][[:lower:]]+){2,})\b/';
 const BEFORE_UPPER = '/(?=[[:upper:]])/';
 const DATETIME_FORMAT = 'Y-m-d H:i:s';
 
+class Revision
+{
+	public $id;
+	public $created;
+	public $remote_addr;
+	public $size;
+
+	private $time_created;
+
+	public function __construct()
+	{
+		$this->created = DateTime::createFromFormat('U', $this->time_created);
+	}
+}
+
 class NewPage
 {
 	public $slug;
@@ -21,7 +36,7 @@ class NewPage
 
 class Page extends NewPage
 {
-	public $last_modified;
+	public $modified;
 	private $time_modified;
 
 	public static function IsValidTitle($text)
@@ -33,7 +48,7 @@ class Page extends NewPage
 	public function __construct()
 	{
 		parent::__construct($this->slug);
-		$this->last_modified = DateTime::createFromFormat('U', $this->time_modified);
+		$this->modified = DateTime::createFromFormat('U', $this->time_modified);
 	}
 
 	public function IntoHtml()
@@ -200,6 +215,42 @@ function view_edit($pdo, $slug)
 	}
 }
 
+function view_history($pdo, $slug)
+{
+	$statement = $pdo->prepare("
+		SELECT slug
+		FROM pages
+		WHERE slug = ?
+	;");
+	$statement->execute(array($slug));
+	$page = $statement->fetch(PDO::FETCH_OBJ);
+
+	if (!$page) {
+		render_not_found($slug);
+		return;
+	}
+
+	$statement = $pdo->prepare("
+		SELECT
+			revisions.id as id,
+			revisions.time_created as time_created,
+			revisions.remote_addr as remote_addr,
+			LENGTH(revisions.body) as size
+		FROM
+			revisions
+			JOIN pages ON revisions.page_id = pages.id
+		WHERE
+			pages.slug = ?
+		ORDER BY
+			revisions.time_created DESC
+	;");
+
+	$statement->execute(array($slug));
+	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
+	$revisions = $statement->fetchAll();
+	render_history($slug, $revisions);
+}
+
 function view_backlinks($pdo, $slug)
 {
 	$statement = $pdo->prepare("
@@ -223,7 +274,7 @@ function view_backlinks($pdo, $slug)
 
 	$statement->execute(array("%" . $slug . "%"));
 	$references = $statement->fetchAll(PDO::FETCH_OBJ);
-	render_backlinks($page, $references);
+	render_backlinks($slug, $references);
 }
 
 $pdo = new PDO('sqlite:./' . DB_NAME);
@@ -252,7 +303,9 @@ case 'GET':
 		switch ($action) {
 			case "edit":
 				view_edit($pdo, $slug);
+				break;
 			case "history":
+				view_history($pdo, $slug);
 				break;
 			case "backlinks":
 				view_backlinks($pdo, $slug);
@@ -395,7 +448,7 @@ function render_page($page)
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
-			last modified: <?=$page->last_modified->format(DATETIME_FORMAT)?></a><br>
+			last modified: <?=$page->modified->format(DATETIME_FORMAT)?></a><br>
 			<a href="?<?=$page->slug?>=history">history</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=edit">edit</a>
@@ -413,7 +466,7 @@ function render_revision($page)
 		</h1>
 
 		<footer class="meta">
-			Viewing revision from <?=$page->last_modified->format(DATETIME_FORMAT)?>.
+			Viewing revision from <?=$page->modified->format(DATETIME_FORMAT)?>.
 		</footer>
 
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
@@ -439,11 +492,32 @@ function render_edit($page)
 	</article>
 <?php }
 
-function render_backlinks($page, $references)
+function render_history($slug, $revisions)
 { ?>
 	<article style="background:aliceblue">
 		<h1 class="meta">
-			What links to <a href="?<?=$page->slug?>"><?=$page->slug?></a>?
+			Revision history for <a href="?<?=$slug?>"><?=$slug?></a>
+		</h1>
+
+		<ul>
+		<?php foreach ($revisions as $revision): ?>
+			<li>
+				<a href="?<?=$slug?>[<?=$revision->id?>]">
+					<?=$revision->created->format(DATETIME_FORMAT)?>
+				</a>
+				from <?=$revision->remote_addr?>
+				(<?=$revision->size?> chars)
+			</li>
+		<?php endforeach ?>
+		</ul>
+	</article>
+<?php }
+
+function render_backlinks($slug, $references)
+{ ?>
+	<article style="background:aliceblue">
+		<h1 class="meta">
+			What links to <a href="?<?=$slug?>"><?=$slug?></a>?
 		</h1>
 
 		<ul>
