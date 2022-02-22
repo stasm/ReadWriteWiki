@@ -73,8 +73,6 @@ class Page extends NewPage
 		$inside_pre = false;
 
 		foreach(explode(PHP_EOL, $this->body) as $line) {
-			$line = htmlentities($line);
-
 			if (starts_with($line, '---')) {
 				if ($inside_list) {
 					$inside_list = false;
@@ -100,6 +98,7 @@ class Page extends NewPage
 				}
 
 				$line = substr($line, 1);
+				$line = htmlentities($line);
 				$line = $this->Strongify($line);
 				$line = $this->Linkify($line);
 				yield '<li>' . $line . '</li>';
@@ -116,11 +115,13 @@ class Page extends NewPage
 					yield '<pre>';
 				}
 
-				yield substr($line, 1);
+				$line = substr($line, 1);
+				$line = htmlentities($line);
+				yield $line;
 				continue;
 			}
 
-			if (starts_with($line, '&gt;')) {
+			if (starts_with($line, '>')) {
 				if ($inside_list) {
 					$inside_list = false;
 					yield '</ul>';
@@ -130,7 +131,8 @@ class Page extends NewPage
 					yield '</pre>';
 				}
 
-				$line = substr($line, 4);
+				$line = substr($line, 1);
+				$line = htmlentities($line);
 				$line = $this->Strongify($line);
 				$line = $this->Linkify($line);
 				yield '<blockquote>' . $line . '</blockquote>';
@@ -148,6 +150,7 @@ class Page extends NewPage
 					yield '</pre>';
 				}
 
+				$line = htmlentities($line);
 				$line = $this->Strongify($line);
 				$line = $this->Linkify($line);
 				yield '<p>' . $line . '</p>';
