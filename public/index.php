@@ -420,6 +420,8 @@ function render_head()
 			textarea {
 				width: 460px;
 				height: 300px;
+				font-family: serif;
+				font-size: 100%;
 			}
 		</style>
 	</head>
