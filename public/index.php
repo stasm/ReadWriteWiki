@@ -377,6 +377,8 @@ function render_head()
 	<!doctype html>
 	<title><?=implode(' & ', $panels)?></title>
 	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<style>
 			body {
 				display: flex;
