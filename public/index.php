@@ -469,7 +469,8 @@ function render_head()
 			}
 
 			textarea {
-				width: 460px;
+				box-sizing: border-box;
+				width: 100%;
 				height: 300px;
 				font-family: serif;
 				font-size: 100%;
