@@ -87,6 +87,23 @@ class Page extends NewPage
 				continue;
 			}
 
+			if (starts_with($line, '#')) {
+				if ($inside_list) {
+					$inside_list = false;
+					yield '</ul>';
+				}
+				if ($inside_pre) {
+					$inside_pre = false;
+					yield '</pre>';
+				}
+
+				$line = substr($line, 1);
+				$line = htmlentities($line);
+				$line = $this->Linkify($line);
+				yield '<h2>' . $line . '</h2>';
+				continue;
+			}
+
 			if (starts_with($line, '*')) {
 				if ($inside_pre) {
 					$inside_pre = false;
@@ -418,6 +435,10 @@ function render_head()
 				min-width: min(calc(100vw - 16px), 500px);
 				max-width: 500px;
 				padding: 15px;
+			}
+
+			article h2 {
+				font-size: 1.2rem;
 			}
 
 			article ul {
