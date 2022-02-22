@@ -427,6 +427,7 @@ function render_head()
 			}
 
 			article pre {
+				white-space: pre-wrap;
 				padding: 3px 1px;
 				background: whitesmoke;
 			}
