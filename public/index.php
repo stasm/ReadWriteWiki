@@ -199,7 +199,7 @@ class Page extends NewPage
 	private function Strongify($text)
 	{
 		return preg_replace(
-				'/\b__(.+?)__\b/',
+				'/\b_(.+?)_\b/',
 				'<strong>$1</strong>',
 				$text);
 	}
