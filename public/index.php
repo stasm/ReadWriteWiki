@@ -100,6 +100,8 @@ class Page extends NewPage
 				}
 
 				$line = substr($line, 1);
+				$line = $this->Strongify($line);
+				$line = $this->Linkify($line);
 				yield '<li>' . $line . '</li>';
 				continue;
 			}
@@ -115,6 +117,23 @@ class Page extends NewPage
 				}
 
 				yield substr($line, 1);
+				continue;
+			}
+
+			if (starts_with($line, '&gt;')) {
+				if ($inside_list) {
+					$inside_list = false;
+					yield '</ul>';
+				}
+				if ($inside_pre) {
+					$inside_pre = false;
+					yield '</pre>';
+				}
+
+				$line = substr($line, 4);
+				$line = $this->Strongify($line);
+				$line = $this->Linkify($line);
+				yield '<blockquote>' . $line . '</blockquote>';
 				continue;
 			}
 
@@ -399,7 +418,12 @@ function render_head()
 			}
 
 			article ul {
-				padding-left: 1em;
+				padding-left: 1rem;
+			}
+
+			article blockquote {
+				margin-inline-start: 1rem;
+				font-style: italic;
 			}
 
 			article pre {
