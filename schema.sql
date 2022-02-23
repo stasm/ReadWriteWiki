@@ -1,5 +1,4 @@
 BEGIN TRANSACTION;
-DROP TABLE IF EXISTS "pages";
 CREATE TABLE IF NOT EXISTS "pages" (
 	"slug"	TEXT NOT NULL UNIQUE,
 	"body"	TEXT,
@@ -7,7 +6,6 @@ CREATE TABLE IF NOT EXISTS "pages" (
 	"remote_addr"	TEXT,
 	PRIMARY KEY("slug")
 );
-DROP TABLE IF EXISTS "revisions";
 CREATE TABLE IF NOT EXISTS "revisions" (
 	"id"	INTEGER NOT NULL UNIQUE,
 	"slug"	INTEGER NOT NULL,
@@ -16,11 +14,9 @@ CREATE TABLE IF NOT EXISTS "revisions" (
 	"remote_addr"	TEXT,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
-DROP INDEX IF EXISTS "slugs";
 CREATE UNIQUE INDEX IF NOT EXISTS "slugs" ON "pages" (
 	"slug"
 );
-DROP TRIGGER IF EXISTS "record_page_creation";
 CREATE TRIGGER record_page_creation
 AFTER INSERT ON pages 
 BEGIN
@@ -36,7 +32,6 @@ BEGIN
 		new.remote_addr
 	);
 END;
-DROP TRIGGER IF EXISTS "record_page_revision";
 CREATE TRIGGER record_page_revision
 AFTER UPDATE ON pages 
 BEGIN
@@ -52,4 +47,7 @@ BEGIN
 		new.remote_addr
 	);
 END;
+CREATE VIEW revision_log AS
+SELECT id, slug, body, LENGTH(body) AS size, time_created, remote_addr
+FROM revisions;
 COMMIT;

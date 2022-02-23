@@ -28,12 +28,15 @@ class Revision
 	public $created;
 	public $remote_addr;
 	public $size;
+	public $delta;
 
 	private $time_created;
+	private $prev_size;
 
 	public function __construct()
 	{
 		$this->created = DateTime::createFromFormat('U', $this->time_created);
+		$this->delta = $this->size - $this->prev_size;
 	}
 }
 
@@ -284,10 +287,10 @@ function view_history($state, $slug)
 	}
 
 	$statement = $state->pdo->prepare('
-		SELECT id, time_created, remote_addr, LENGTH(body) as size
-		FROM revisions
+		SELECT id, time_created, remote_addr, size, LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size
+		FROM revision_log
 		WHERE slug = ?
-		ORDER BY time_created DESC
+		ORDER BY id DESC
 	;');
 
 	$statement->execute(array($slug));
@@ -581,7 +584,7 @@ function render_history($slug, $revisions)
 				on <?=$revision->created->format(AS_DATE)?>
 				at <?=$revision->created->format(AS_TIME)?>
 				from <?=$revision->remote_addr?>
-				(<?=$revision->size?> chars)
+				(<?=sprintf("%+d", $revision->delta)?> chars)
 			</li>
 		<?php endforeach ?>
 		</ul>
