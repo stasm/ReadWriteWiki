@@ -3,7 +3,8 @@ const DB_NAME = '../wiki.db';
 const MAIN_PAGE = 'HomePage';
 const PAGE_TITLE = '/\b(([[:upper:]][[:lower:]]+){2,})\b/';
 const BEFORE_UPPER = '/(?=[[:upper:]])/';
-const DATETIME_FORMAT = 'Y-m-d H:i:s';
+const AS_DATE = 'Y-m-d';
+const AS_TIME = 'H:i';
 
 class State
 {
@@ -515,7 +516,7 @@ function render_page($page, $state)
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
-			last modified: <?=$page->modified->format(DATETIME_FORMAT)?></a><br>
+			last modified on <?=$page->modified->format(AS_DATE)?><br>
 			<a href="?">home</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
@@ -536,7 +537,7 @@ function render_revision($page)
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
-			revision from <?=$page->modified->format(DATETIME_FORMAT)?></a><br>
+			revision from <?=$page->modified->format(AS_DATE)?><br>
 			<a href="?">home</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
@@ -575,8 +576,10 @@ function render_history($slug, $revisions)
 		<?php foreach ($revisions as $revision): ?>
 			<li>
 				<a href="?<?=$slug?>[<?=$revision->id?>]">
-					<?=$revision->created->format(DATETIME_FORMAT)?>
+					[<?=$revision->id?>]
 				</a>
+				on <?=$revision->created->format(AS_DATE)?>
+				at <?=$revision->created->format(AS_TIME)?>
 				from <?=$revision->remote_addr?>
 				(<?=$revision->size?> chars)
 			</li>
