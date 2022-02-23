@@ -367,8 +367,12 @@ case 'GET':
 	render_end();
 	break;
 case 'POST':
-	// TODO Validate
-	// TODO CSRF
+	$honeypot = filter_input(INPUT_POST, 'user');
+	if ($honeypot) {
+		header($_SERVER['SERVER_PROTOCOL'] . ' 405 Method Not Allowed', true, 405);
+		exit();
+	}
+
 	$slug = $_POST['slug'];
 	$body = $_POST['body'];
 	$time = date('U');
@@ -567,6 +571,7 @@ function render_edit($page)
 		<form method="post" action="?">
 			<input type="hidden" name="slug" value="<?=$page->slug?>">
 			<textarea name="body" placeholder="Type here..."><?=$page->body?></textarea>
+			<input type="text" name="user" placeholder="Leave this empty.">
 			<button type="submit">Save</button>
 		</form>
 	</article>
