@@ -203,8 +203,8 @@ class Page extends NewPage
 	private function Strongify($text)
 	{
 		return preg_replace(
-				'/\b_(.+?)_\b/',
-				'<strong>$1</strong>',
+				array('/\b_(.+?)_\b/', '/`(.+?)`/'),
+				array('<strong>$1</strong>', '<code>$1</code>'),
 				$text);
 	}
 }
@@ -457,6 +457,10 @@ function render_head()
 			article pre {
 				white-space: pre-wrap;
 				padding: 3px 1px;
+				background: whitesmoke;
+			}
+
+			article code {
 				background: whitesmoke;
 			}
 
