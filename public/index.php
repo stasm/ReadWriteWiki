@@ -516,8 +516,9 @@ function render_page($page, $state)
 
 		<footer class="meta">
 			last modified: <?=$page->modified->format(DATETIME_FORMAT)?></a><br>
-			<a href="?<?=$page->slug?>=history">history</a>
+			<a href="?">home</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
+			<a href="?<?=$page->slug?>=history">history</a>
 			<a href="?<?=$page->slug?>=edit">edit</a>
 		</footer>
 	</article>
@@ -536,8 +537,9 @@ function render_revision($page)
 
 		<footer class="meta">
 			revision from <?=$page->modified->format(DATETIME_FORMAT)?></a><br>
-			<a href="?<?=$page->slug?>=history">history</a>
+			<a href="?">home</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
+			<a href="?<?=$page->slug?>=history">history</a>
 			<a href="?<?=$page->slug?>">latest</a>
 		</footer>
 
