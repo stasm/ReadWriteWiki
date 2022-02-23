@@ -1,8 +1,8 @@
 <?php
 const DB_NAME = '../wiki.db';
 const MAIN_PAGE = 'HomePage';
-const PAGE_TITLE = '/\b(([[:upper:]][[:lower:]]+){2,})\b/';
-const BEFORE_UPPER = '/(?=[[:upper:]])/';
+const PAGE_TITLE = '/\b((\p{Lu}\p{Ll}+){2,})\b/u';
+const BEFORE_UPPER = '/(?=\p{Lu})/u';
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
 
