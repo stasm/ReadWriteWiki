@@ -373,10 +373,14 @@ case 'POST':
 		exit();
 	}
 
-	$slug = $_POST['slug'];
-	$body = $_POST['body'];
+	$body = filter_input(INPUT_POST, 'body');
 	$time = date('U');
 	$addr = $_SERVER['REMOTE_ADDR'];
+	$slug = filter_input(INPUT_POST, 'slug');
+	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => PAGE_TITLE]])) {
+		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+		exit();
+	}
 
 	$statement = $state->pdo->prepare('
 		INSERT INTO pages (slug, body, time_modified, remote_addr)
