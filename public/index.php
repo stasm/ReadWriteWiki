@@ -446,6 +446,8 @@ function render_head()
 				box-sizing: border-box;
 				min-width: min(calc(100vw - 16px), 500px);
 				max-width: 500px;
+				max-height: calc(100vh - 16px);
+				overflow-y: auto;
 				padding: 15px;
 			}
 
