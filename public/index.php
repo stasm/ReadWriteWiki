@@ -288,7 +288,7 @@ function view_history($state, $slug)
 
 	$statement = $state->pdo->prepare('
 		SELECT id, time_created, remote_addr, size, LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size
-		FROM revision_log
+		FROM changelog
 		WHERE slug = ?
 		ORDER BY id DESC
 	;');
