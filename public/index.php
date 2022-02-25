@@ -196,7 +196,7 @@ class Page extends NewPage
 	{
 		return preg_replace(
 				PAGE_TITLE,
-				'<a href="?$1">$1</a>',
+				"<a href=\"?$this->slug&$1\">$1</a>",
 				$text);
 	}
 
@@ -493,6 +493,7 @@ function render_head()
 			}
 		</style>
 	</head>
+	<body onload="window.scrollBy({left: window.innerWidth, behavior: 'smooth'})">
 <?php }
 
 function render_end()
