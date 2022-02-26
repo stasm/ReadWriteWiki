@@ -25,6 +25,7 @@ class State
 class Revision
 {
 	public $id;
+	public $prev_id;
 	public $created;
 	public $remote_addr;
 	public $size;
@@ -56,6 +57,7 @@ class NewPage
 
 class Page extends NewPage
 {
+	public $rev = null;
 	public $modified;
 	private $time_modified;
 
@@ -229,7 +231,7 @@ function view_read($state, $slug)
 function view_revision($state, $slug, $rev)
 {
 	$statement = $state->pdo->prepare('
-		SELECT slug, body, time_created as time_modified
+		SELECT id as rev, slug, body, time_created as time_modified
 		FROM revisions
 		WHERE slug = ? AND id = ?
 	;');
@@ -281,7 +283,10 @@ function view_history($state, $slug)
 	}
 
 	$statement = $state->pdo->prepare('
-		SELECT id, time_created, remote_addr, size, LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size
+		SELECT
+			id, time_created, remote_addr, size,
+			LEAD(id, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_id,
+			LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size
 		FROM changelog
 		WHERE slug = ?
 		ORDER BY id DESC
@@ -569,6 +574,8 @@ function render_revision($page)
 			<a href="?<?=$page->slug?>">
 				<?=$page->title?>
 			</a>
+			<small>[<?=$page->rev?>]</small>
+			</a>
 		</h1>
 
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
@@ -619,7 +626,7 @@ function render_history($slug, $revisions)
 				on <?=$revision->created->format(AS_DATE)?>
 				at <?=$revision->created->format(AS_TIME)?>
 				from <?=$revision->remote_addr?>
-				(<?=sprintf("%+d", $revision->delta)?> chars)
+				(<a href="?<?=$slug?>[<?=$revision->prev_id?>]&<?=$slug?>[<?=$revision->id?>]"><?=sprintf("%+d", $revision->delta)?> chars</a>)
 			</li>
 		<?php endforeach ?>
 		</ul>
