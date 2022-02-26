@@ -1,8 +1,8 @@
 <?php
 const DB_NAME = '../wiki.db';
 const MAIN_PAGE = 'HomePage';
-const PAGE_TITLE = '/\b((\p{Lu}\p{Ll}+){2,})\b/u';
-const BEFORE_UPPER = '/(?=\p{Lu})/u';
+const RE_PAGE_TITLE = '/\b((\p{Lu}\p{Ll}+){2,})\b/u';
+const RE_BEFORE_UPPER = '/(?=\p{Lu})/u';
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
 
@@ -48,7 +48,7 @@ class NewPage
 
 	public function __construct($slug)
 	{
-		$words = preg_split(BEFORE_UPPER, $slug);
+		$words = preg_split(RE_BEFORE_UPPER, $slug);
 		$this->title = implode(' ', $words);
 		$this->slug = $slug;
 	}
@@ -58,12 +58,6 @@ class Page extends NewPage
 {
 	public $modified;
 	private $time_modified;
-
-	public static function IsValidTitle($text)
-	{
-		preg_match(PAGE_TITLE, $text, $matches);
-		return $matches && $matches[0] == $text;
-	}
 
 	public function __construct()
 	{
@@ -195,7 +189,7 @@ class Page extends NewPage
 	private function Linkify($text)
 	{
 		return preg_replace(
-				PAGE_TITLE,
+				RE_PAGE_TITLE,
 				"<a href=\"?$this->slug&$1\">$1</a>",
 				$text);
 	}
@@ -337,12 +331,17 @@ case 'GET':
 
 	render_head();
 	foreach ($_GET as $slug => $action) {
-		if (!Page::IsValidTitle($slug)) {
-			die("$slug is not a valid page title.");
+		if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_TITLE]])) {
+			render_not_valid($slug);
+			continue;
 		}
 
 		if (is_array($action)) {
 			foreach ($action as $rev => $_) {
+				if (!filter_var($rev, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])) {
+					render_not_valid($slug, $rev);
+					continue;
+				}
 				view_revision($state, $slug, $rev);
 			}
 			// Only reading is supported for revisions.
@@ -377,7 +376,7 @@ case 'POST':
 	$time = date('U');
 	$addr = $_SERVER['REMOTE_ADDR'];
 	$slug = filter_input(INPUT_POST, 'slug');
-	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => PAGE_TITLE]])) {
+	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_TITLE]])) {
 		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
 		exit();
 	}
@@ -426,7 +425,7 @@ function render_head()
 	}
 ?>
 	<!doctype html>
-	<title><?=implode(' & ', $panels)?></title>
+	<title><?=htmlentities(implode(' & ', $panels))?></title>
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -503,6 +502,22 @@ function render_end()
 	</body>
 <?php }
 
+function render_not_valid($slug, $rev = null)
+{ ?>
+	<article class="meta" style="background:mistyrose">
+	<?php if ($rev !== null): ?>
+		<h1>Invalid Revision</h1>
+		<p><?=htmlentities($slug)?>[<?=htmlentities($rev)?>] is not a valid revision.</p>
+	<?php else: ?>
+		<h1>Invalid Page Name </h1>
+		<p><?=htmlentities($slug)?> is not a valid page name.</p>
+	<?php endif ?>
+		<footer class="meta">
+			<a href="?">home</a>
+		</footer>
+	</article>
+<?php }
+
 function render_not_found($slug, $rev = null)
 { ?>
 	<article class="meta" style="background:mistyrose">
@@ -512,6 +527,10 @@ function render_not_found($slug, $rev = null)
 	<?php else: ?>
 		<h1>Page Not Found</h1>
 		<p><?=$slug?> doesn't exist yet. <a href="?<?=$slug?>=edit">Create?</a></p>
+
+		<footer class="meta">
+			<a href="?">home</a>
+		</footer>
 	<?php endif ?>
 	</article>
 <?php }
