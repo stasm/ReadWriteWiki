@@ -252,7 +252,7 @@ function view_edit($state, $slug)
 	$statement = $state->pdo->prepare('
 		SELECT slug, body, time_modified
 		FROM pages
-		WHERE pages.slug = ?
+		WHERE slug = ?
 	;');
 
 	$statement->execute(array($slug));
@@ -262,6 +262,25 @@ function view_edit($state, $slug)
 	if (!$page) {
 		$page = new NewPage($slug);
 		render_edit($page);
+	} else {
+		render_edit($page);
+	}
+}
+
+function view_restore($state, $slug, $rev)
+{
+	$statement = $state->pdo->prepare('
+		SELECT id as rev, slug, body, time_created as time_modified
+		FROM revisions
+		WHERE slug = ? AND id = ?
+	;');
+
+	$statement->execute(array($slug, $rev));
+	$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
+	$page = $statement->fetch();
+
+	if (!$page) {
+		render_not_found($slug, $rev);
 	} else {
 		render_edit($page);
 	}
@@ -342,18 +361,24 @@ case 'GET':
 		}
 
 		if (is_array($action)) {
-			foreach ($action as $rev => $_) {
+			$revs = $action;
+			foreach ($revs as $rev => $action) {
 				if (!filter_var($rev, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])) {
 					render_not_valid($slug, $rev);
 					continue;
 				}
-				view_revision($state, $slug, $rev);
-			}
-			// Only reading is supported for revisions.
-			continue;
-		}
 
-		switch ($action) {
+				switch ($action) {
+				case 'edit':
+					view_restore($state, $slug, $rev);
+					break;
+				case 'read':
+				default:
+					view_revision($state, $slug, $rev);
+				}
+			}
+		} else {
+			switch ($action) {
 			case 'edit':
 				view_edit($state, $slug);
 				break;
@@ -366,6 +391,7 @@ case 'GET':
 			case 'read':
 			default:
 				view_read($state, $slug);
+			}
 		}
 	}
 	render_end();
@@ -573,15 +599,15 @@ function render_revision($page)
 		<h1>
 			<a href="?<?=$page->slug?>">
 				<?=$page->title?>
-			</a>
-			<small>[<?=$page->rev?>]</small>
-			</a>
+			</a> <small>[<?=$page->rev?>]</small>
 		</h1>
 
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
-			revision from <?=$page->modified->format(AS_DATE)?><br>
+			revision <?=$page->rev?> from <?=$page->modified->format(AS_DATE)?>
+			<a href="?<?=$page->slug?>[<?=$page->rev?>]=edit">restore?</a>
+			<br>
 			<a href="?">home</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
@@ -595,10 +621,15 @@ function render_edit($page)
 { ?>
 	<article style="background:cornsilk">
 		<h1 class="meta">
-			Edit
-			<a href="?<?=$page->slug?>">
+		<? if ($page->rev): ?>
+			Restore <a href="?<?=$page->slug?>">
+				<?=$page->title?>
+			</a> <small>[<?=$page->rev?>]</small>
+		<? else: ?>
+			Edit <a href="?<?=$page->slug?>">
 				<?=$page->title?>
 			</a>
+		<? endif ?>
 		</h1>
 
 		<form method="post" action="?">
