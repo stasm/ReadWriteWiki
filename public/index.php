@@ -621,15 +621,15 @@ function render_edit($page)
 { ?>
 	<article style="background:cornsilk">
 		<h1 class="meta">
-		<? if ($page->rev): ?>
+		<?php if ($page->rev): ?>
 			Restore <a href="?<?=$page->slug?>">
 				<?=$page->title?>
 			</a> <small>[<?=$page->rev?>]</small>
-		<? else: ?>
+		<?php else: ?>
 			Edit <a href="?<?=$page->slug?>">
 				<?=$page->title?>
 			</a>
-		<? endif ?>
+		<?php endif ?>
 		</h1>
 
 		<form method="post" action="?">
