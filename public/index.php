@@ -43,6 +43,7 @@ class Revision
 
 class NewPage
 {
+	public $rev = null;
 	public $slug;
 	public $title;
 	public $body = '';
@@ -57,7 +58,6 @@ class NewPage
 
 class Page extends NewPage
 {
-	public $rev = null;
 	public $modified;
 	private $time_modified;
 
