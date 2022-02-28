@@ -320,19 +320,6 @@ function view_history($state, $slug)
 function view_backlinks($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT slug
-		FROM pages
-		WHERE slug = ?
-	;');
-	$statement->execute(array($slug));
-	$page = $statement->fetch(PDO::FETCH_OBJ);
-
-	if (!$page) {
-		render_not_found($slug);
-		return;
-	}
-
-	$statement = $state->pdo->prepare('
 		SELECT slug, body
 		FROM pages
 		WHERE body LIKE ?
@@ -561,6 +548,7 @@ function render_not_found($slug, $rev = null)
 
 		<footer class="meta">
 			<a href="?">home</a>
+			<a href="?<?=$slug?>=backlinks">backlinks</a>
 		</footer>
 	<?php endif ?>
 	</article>
