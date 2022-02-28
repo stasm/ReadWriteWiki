@@ -84,23 +84,14 @@ class Page extends NewPage
 				}
 
 				yield '<hr>';
-				continue;
-			}
 
-			if (starts_with($line, '#')) {
-				if ($inside_list) {
-					$inside_list = false;
-					yield '</ul>';
-				}
-				if ($inside_pre) {
-					$inside_pre = false;
-					yield '</pre>';
+				$heading = ltrim($line, '- ');
+				if ($heading) {
+					$heading = htmlentities($heading);
+					$heading = $this->Linkify($heading);
+					yield '<h2>' . $heading . '</h2>';
 				}
 
-				$line = substr($line, 1);
-				$line = htmlentities($line);
-				$line = $this->Linkify($line);
-				yield '<h2>' . $line . '</h2>';
 				continue;
 			}
 
