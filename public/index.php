@@ -26,7 +26,7 @@ class Change
 {
 	public $id;
 	public $prev_id;
-	public $created;
+	public $date_created;
 	public $remote_addr;
 	public $size;
 	public $delta;
@@ -36,7 +36,7 @@ class Change
 
 	public function __construct()
 	{
-		$this->created = DateTime::createFromFormat('U', $this->time_created);
+		$this->date_created = DateTime::createFromFormat('U', $this->time_created);
 		$this->delta = $this->size - $this->prev_size;
 	}
 }
@@ -58,13 +58,13 @@ class NewPage
 
 class Page extends NewPage
 {
-	public $modified;
-	private $time_modified;
+	public $date_created;
+	private $time_created;
 
 	public function __construct()
 	{
 		parent::__construct($this->slug);
-		$this->modified = DateTime::createFromFormat('U', $this->time_modified);
+		$this->date_created = DateTime::createFromFormat('U', $this->time_created);
 	}
 
 	public function IntoHtml()
@@ -203,7 +203,7 @@ function starts_with($string, $prefix) {
 function view_read($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT slug, body, time_created as time_modified
+		SELECT slug, body, time_created
 		FROM latest
 		WHERE slug = ?
 	;');
@@ -222,7 +222,7 @@ function view_read($state, $slug)
 function view_revision($state, $slug, $rev)
 {
 	$statement = $state->pdo->prepare('
-		SELECT id as rev, slug, body, time_created as time_modified
+		SELECT id as rev, slug, body, time_created
 		FROM revisions
 		WHERE slug = ? AND id = ?
 	;');
@@ -241,7 +241,7 @@ function view_revision($state, $slug, $rev)
 function view_edit($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT slug, body, time_created as time_modified
+		SELECT slug, body, time_created
 		FROM latest
 		WHERE slug = ?
 	;');
@@ -261,7 +261,7 @@ function view_edit($state, $slug)
 function view_restore($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare('
-		SELECT id, slug, body, time_created as time_modified
+		SELECT id, slug, body, time_created
 		FROM revisions
 		WHERE slug = ? AND id = ?
 	;');
@@ -546,7 +546,7 @@ function render_page($page, $state)
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
-			last modified on <?=$page->modified->format(AS_DATE)?><br>
+			last modified on <?=$page->date_created->format(AS_DATE)?><br>
 			<a href="?">home</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
@@ -567,7 +567,7 @@ function render_revision($page)
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
-			revision <?=$page->id?> from <?=$page->modified->format(AS_DATE)?>
+			revision <?=$page->id?> from <?=$page->date_created->format(AS_DATE)?>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=edit">restore?</a>
 			<br>
 			<a href="?">home</a>
@@ -616,8 +616,8 @@ function render_history($slug, $changes)
 				<a href="?<?=$slug?>[<?=$change->id?>]">
 					[<?=$change->id?>]
 				</a>
-				on <?=$change->created->format(AS_DATE)?>
-				at <?=$change->created->format(AS_TIME)?>
+				on <?=$change->date_created->format(AS_DATE)?>
+				at <?=$change->date_created->format(AS_TIME)?>
 				from <?=$change->remote_addr?>
 				(<a href="?<?=$slug?>[<?=$change->prev_id?>]&<?=$slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
 			</li>
