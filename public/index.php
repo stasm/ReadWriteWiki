@@ -22,7 +22,7 @@ class State
 	}
 }
 
-class Revision
+class Change
 {
 	public $id;
 	public $prev_id;
@@ -290,12 +290,12 @@ function view_history($state, $slug)
 	;');
 
 	$statement->execute(array($slug));
-	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
-	$revisions = $statement->fetchAll();
-	if (!$revisions) {
+	$statement->setFetchMode(PDO::FETCH_CLASS, 'Change');
+	$changes = $statement->fetchAll();
+	if (!$changes) {
 		render_not_found($slug);
 	} else {
-		render_history($slug, $revisions);
+		render_history($slug, $changes);
 	}
 }
 
@@ -603,7 +603,7 @@ function render_edit($page)
 	</article>
 <?php }
 
-function render_history($slug, $revisions)
+function render_history($slug, $changes)
 { ?>
 	<article style="background:aliceblue">
 		<h1 class="meta">
@@ -611,15 +611,15 @@ function render_history($slug, $revisions)
 		</h1>
 
 		<ul>
-		<?php foreach ($revisions as $revision): ?>
+		<?php foreach ($changes as $change): ?>
 			<li>
-				<a href="?<?=$slug?>[<?=$revision->id?>]">
-					[<?=$revision->id?>]
+				<a href="?<?=$slug?>[<?=$change->id?>]">
+					[<?=$change->id?>]
 				</a>
-				on <?=$revision->created->format(AS_DATE)?>
-				at <?=$revision->created->format(AS_TIME)?>
-				from <?=$revision->remote_addr?>
-				(<a href="?<?=$slug?>[<?=$revision->prev_id?>]&<?=$slug?>[<?=$revision->id?>]"><?=sprintf("%+d", $revision->delta)?> chars</a>)
+				on <?=$change->created->format(AS_DATE)?>
+				at <?=$change->created->format(AS_TIME)?>
+				from <?=$change->remote_addr?>
+				(<a href="?<?=$slug?>[<?=$change->prev_id?>]&<?=$slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
 			</li>
 		<?php endforeach ?>
 		</ul>
