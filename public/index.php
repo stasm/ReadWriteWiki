@@ -43,7 +43,7 @@ class Change
 
 class NewPage
 {
-	public $rev = null;
+	public $id = null;
 	public $slug;
 	public $title;
 	public $body = '';
@@ -227,12 +227,12 @@ function view_revision($state, $slug, $rev)
 		WHERE slug = ? AND id = ?
 	;');
 
-	$statement->execute(array($slug, $rev));
+	$statement->execute(array($slug, $id));
 	$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
 	$page = $statement->fetch();
 
 	if (!$page) {
-		render_not_found($slug, $rev);
+		render_not_found($slug, $id);
 	} else {
 		render_revision($page);
 	}
@@ -258,20 +258,20 @@ function view_edit($state, $slug)
 	}
 }
 
-function view_restore($state, $slug, $rev)
+function view_restore($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare('
-		SELECT id as rev, slug, body, time_created as time_modified
+		SELECT id, slug, body, time_created as time_modified
 		FROM revisions
 		WHERE slug = ? AND id = ?
 	;');
 
-	$statement->execute(array($slug, $rev));
+	$statement->execute(array($slug, $id));
 	$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
 	$page = $statement->fetch();
 
 	if (!$page) {
-		render_not_found($slug, $rev);
+		render_not_found($slug, $id);
 	} else {
 		render_edit($page);
 	}
@@ -330,20 +330,20 @@ case 'GET':
 		}
 
 		if (is_array($action)) {
-			$revs = $action;
-			foreach ($revs as $rev => $action) {
-				if (!filter_var($rev, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])) {
-					render_not_valid($slug, $rev);
+			$ids = $action;
+			foreach ($ids as $id => $action) {
+				if (!filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])) {
+					render_not_valid($slug, $id);
 					continue;
 				}
 
 				switch ($action) {
 				case 'edit':
-					view_restore($state, $slug, $rev);
+					view_restore($state, $slug, $id);
 					break;
 				case 'read':
 				default:
-					view_revision($state, $slug, $rev);
+					view_revision($state, $slug, $id);
 				}
 			}
 		} else {
@@ -407,8 +407,8 @@ function render_head()
 	$panels = array();
 	foreach ($_GET as $slug => $action) {
 		if (is_array($action)) {
-			$revs = implode(',', array_keys($action));
-			$panels[] = "{$slug}[$revs]";
+			$ids = implode(',', array_keys($action));
+			$panels[] = "{$slug}[$ids]";
 		} else if ($action) {
 			$panels[] = "$slug=$action";
 		} else {
@@ -494,12 +494,12 @@ function render_end()
 	</body>
 <?php }
 
-function render_not_valid($slug, $rev = null)
+function render_not_valid($slug, $id = null)
 { ?>
 	<article class="meta" style="background:mistyrose">
-	<?php if ($rev !== null): ?>
+	<?php if ($id !== null): ?>
 		<h1>Invalid Revision</h1>
-		<p><?=htmlentities($slug)?>[<?=htmlentities($rev)?>] is not a valid revision.</p>
+		<p><?=htmlentities($slug)?>[<?=htmlentities($id)?>] is not a valid revision.</p>
 	<?php else: ?>
 		<h1>Invalid Page Name </h1>
 		<p><?=htmlentities($slug)?> is not a valid page name.</p>
@@ -510,12 +510,12 @@ function render_not_valid($slug, $rev = null)
 	</article>
 <?php }
 
-function render_not_found($slug, $rev = null)
+function render_not_found($slug, $id = null)
 { ?>
 	<article class="meta" style="background:mistyrose">
-	<?php if ($rev): ?>
+	<?php if ($id): ?>
 		<h1>Revision Not Found</h1>
-		<p><?=$slug?>[<?=$rev?>] doesn't exist.</p>
+		<p><?=$slug?>[<?=$id?>] doesn't exist.</p>
 	<?php else: ?>
 		<h1>Page Not Found</h1>
 		<p><?=$slug?> doesn't exist yet. <a href="?<?=$slug?>=edit">Create?</a></p>
@@ -561,14 +561,14 @@ function render_revision($page)
 		<h1>
 			<a href="?<?=$page->slug?>">
 				<?=$page->title?>
-			</a> <small>[<?=$page->rev?>]</small>
+			</a> <small>[<?=$page->id?>]</small>
 		</h1>
 
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
-			revision <?=$page->rev?> from <?=$page->modified->format(AS_DATE)?>
-			<a href="?<?=$page->slug?>[<?=$page->rev?>]=edit">restore?</a>
+			revision <?=$page->id?> from <?=$page->modified->format(AS_DATE)?>
+			<a href="?<?=$page->slug?>[<?=$page->id?>]=edit">restore?</a>
 			<br>
 			<a href="?">home</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
@@ -583,10 +583,10 @@ function render_edit($page)
 { ?>
 	<article style="background:cornsilk">
 		<h1 class="meta">
-		<?php if ($page->rev): ?>
+		<?php if ($page->id): ?>
 			Restore <a href="?<?=$page->slug?>">
 				<?=$page->title?>
-			</a> <small>[<?=$page->rev?>]</small>
+			</a> <small>[<?=$page->id?>]</small>
 		<?php else: ?>
 			Edit <a href="?<?=$page->slug?>">
 				<?=$page->title?>
