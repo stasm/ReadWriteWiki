@@ -41,30 +41,28 @@ class Change
 	}
 }
 
-class NewPage
+class Revision
 {
-	public $id = null;
+	public $id;
 	public $slug;
 	public $title;
-	public $body = '';
-
-	public function __construct($slug)
-	{
-		$words = preg_split(RE_BEFORE_UPPER, $slug);
-		$this->title = implode(' ', $words);
-		$this->slug = $slug;
-	}
-}
-
-class Page extends NewPage
-{
+	public $body;
 	public $date_created;
+
 	private $time_created;
 
-	public function __construct()
+	public function __construct($slug = null)
 	{
-		parent::__construct($this->slug);
-		$this->date_created = DateTime::createFromFormat('U', $this->time_created);
+		if ($this->time_created) {
+			$this->date_created = DateTime::createFromFormat('U', $this->time_created);
+		}
+
+		if ($slug) {
+			$this->slug = $slug;
+		}
+
+		$words = preg_split(RE_BEFORE_UPPER, $this->slug);
+		$this->title = implode(' ', $words);
 	}
 
 	public function IntoHtml()
@@ -203,13 +201,13 @@ function starts_with($string, $prefix) {
 function view_read($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT slug, body, time_created
+		SELECT id, slug, body, time_created
 		FROM latest
 		WHERE slug = ?
 	;');
 
 	$statement->execute(array($slug));
-	$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
+	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
 	$page = $statement->fetch();
 
 	if (!$page) {
@@ -228,7 +226,7 @@ function view_revision($state, $slug, $id)
 	;');
 
 	$statement->execute(array($slug, $id));
-	$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
+	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
 	$page = $statement->fetch();
 
 	if (!$page) {
@@ -247,15 +245,14 @@ function view_edit($state, $slug)
 	;');
 
 	$statement->execute(array($slug));
-	$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
+	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
 	$page = $statement->fetch();
 
 	if (!$page) {
-		$page = new NewPage($slug);
-		render_edit($page);
-	} else {
-		render_edit($page);
+		$page = new Revision($slug);
 	}
+
+	render_edit($page);
 }
 
 function view_restore($state, $slug, $id)
@@ -267,7 +264,7 @@ function view_restore($state, $slug, $id)
 	;');
 
 	$statement->execute(array($slug, $id));
-	$statement->setFetchMode(PDO::FETCH_CLASS, 'Page');
+	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
 	$page = $statement->fetch();
 
 	if (!$page) {
@@ -292,6 +289,7 @@ function view_history($state, $slug)
 	$statement->execute(array($slug));
 	$statement->setFetchMode(PDO::FETCH_CLASS, 'Change');
 	$changes = $statement->fetchAll();
+
 	if (!$changes) {
 		render_not_found($slug);
 	} else {
