@@ -203,10 +203,9 @@ function starts_with($string, $prefix) {
 function view_read($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT slug, body, MAX(time_created) as time_modified
-		FROM revisions
+		SELECT slug, body, time_created as time_modified
+		FROM latest
 		WHERE slug = ?
-		GROUP BY slug
 	;');
 
 	$statement->execute(array($slug));
@@ -242,10 +241,9 @@ function view_revision($state, $slug, $rev)
 function view_edit($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT slug, body, MAX(time_created) as time_modified
-		FROM revisions
+		SELECT slug, body, time_created as time_modified
+		FROM latest
 		WHERE slug = ?
-		GROUP BY slug
 	;');
 
 	$statement->execute(array($slug));
@@ -304,10 +302,9 @@ function view_history($state, $slug)
 function view_backlinks($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT slug, body, MAX(time_created)
-		FROM revisions
-		GROUP BY slug
-		HAVING body LIKE ?
+		SELECT slug, body, time_created
+		FROM latest
+		WHERE body LIKE ?
 	;');
 
 	$statement->execute(array("%$slug%"));
