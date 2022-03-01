@@ -203,9 +203,10 @@ function starts_with($string, $prefix) {
 function view_read($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT slug, body, time_modified
-		FROM pages
-		WHERE pages.slug = ?
+		SELECT slug, body, MAX(time_created) as time_modified
+		FROM revisions
+		WHERE slug = ?
+		GROUP BY slug
 	;');
 
 	$statement->execute(array($slug));
@@ -241,9 +242,10 @@ function view_revision($state, $slug, $rev)
 function view_edit($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT slug, body, time_modified
-		FROM pages
+		SELECT slug, body, MAX(time_created) as time_modified
+		FROM revisions
 		WHERE slug = ?
+		GROUP BY slug
 	;');
 
 	$statement->execute(array($slug));
@@ -280,19 +282,6 @@ function view_restore($state, $slug, $rev)
 function view_history($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT slug
-		FROM pages
-		WHERE slug = ?
-	;');
-	$statement->execute(array($slug));
-	$page = $statement->fetch(PDO::FETCH_OBJ);
-
-	if (!$page) {
-		render_not_found($slug);
-		return;
-	}
-
-	$statement = $state->pdo->prepare('
 		SELECT
 			id, time_created, remote_addr, size,
 			LEAD(id, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_id,
@@ -305,15 +294,20 @@ function view_history($state, $slug)
 	$statement->execute(array($slug));
 	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
 	$revisions = $statement->fetchAll();
-	render_history($slug, $revisions);
+	if (!$revisions) {
+		render_not_found($slug);
+	} else {
+		render_history($slug, $revisions);
+	}
 }
 
 function view_backlinks($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT slug, body
-		FROM pages
-		WHERE body LIKE ?
+		SELECT slug, body, MAX(time_created)
+		FROM revisions
+		GROUP BY slug
+		HAVING body LIKE ?
 	;');
 
 	$statement->execute(array("%$slug%"));
@@ -391,22 +385,14 @@ case 'POST':
 	}
 
 	$statement = $state->pdo->prepare('
-		INSERT INTO pages (slug, body, time_modified, remote_addr)
+		INSERT INTO revisions (slug, body, time_created, remote_addr)
 		VALUES (:slug, :body, :time, :addr)
-		ON CONFLICT (slug) DO UPDATE
-		SET
-			body = :body_up,
-			time_modified = :time_up,
-			remote_addr = :addr_up
 	;');
 
 	$statement->bindParam('slug', $slug, PDO::PARAM_STR);
 	$statement->bindParam('body', $body, PDO::PARAM_STR);
 	$statement->bindParam('time', $time, PDO::PARAM_INT);
 	$statement->bindParam('addr', $addr, PDO::PARAM_STR);
-	$statement->bindParam('body_up', $body, PDO::PARAM_STR);
-	$statement->bindParam('time_up', $time, PDO::PARAM_INT);
-	$statement->bindParam('addr_up', $addr, PDO::PARAM_STR);
 
 	if ($statement->execute()) {
 		$_SESSION['revision_created'] = true;
