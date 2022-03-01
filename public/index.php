@@ -219,10 +219,10 @@ function view_read($state, $slug)
 	}
 }
 
-function view_revision($state, $slug, $rev)
+function view_revision($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare('
-		SELECT id as rev, slug, body, time_created
+		SELECT id, slug, body, time_created
 		FROM revisions
 		WHERE slug = ? AND id = ?
 	;');
