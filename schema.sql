@@ -14,7 +14,7 @@ CREATE VIEW changelog AS
 SELECT id, slug, body, LENGTH(body) AS size, time_created, remote_addr
 FROM revisions;
 CREATE VIEW latest AS
-SELECT id, slug, body, MAX(time_created) as time_created, remote_addr
+SELECT MAX(id) AS id, slug, body, time_created, remote_addr
 FROM revisions
 GROUP BY slug;
 COMMIT;
