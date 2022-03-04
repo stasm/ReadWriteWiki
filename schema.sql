@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS "revisions" (
 	"slug"	INTEGER NOT NULL,
 	"body"	TEXT,
 	"time_created"	INTEGER NOT NULL,
-	"remote_addr"	TEXT,
+	"remote_addr"	BLOB NOT NULL,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
 CREATE INDEX IF NOT EXISTS "slugs" ON "revisions" (

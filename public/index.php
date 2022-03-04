@@ -27,17 +27,19 @@ class Change
 	public $id;
 	public $prev_id;
 	public $date_created;
-	public $remote_addr;
+	public $remote_ip;
 	public $size;
 	public $delta;
 
 	private $time_created;
+	private $remote_addr;
 	private $prev_size;
 
 	public function __construct()
 	{
 		$this->date_created = DateTime::createFromFormat('U', $this->time_created);
 		$this->delta = $this->size - $this->prev_size;
+		$this->remote_ip = inet_ntop($this->remote_addr);
 	}
 }
 
@@ -372,7 +374,7 @@ case 'POST':
 
 	$body = filter_input(INPUT_POST, 'body');
 	$time = date('U');
-	$addr = $_SERVER['REMOTE_ADDR'];
+	$addr = inet_pton($_SERVER['REMOTE_ADDR']);
 	$slug = filter_input(INPUT_POST, 'slug');
 	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_TITLE]])) {
 		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
@@ -616,7 +618,7 @@ function render_history($slug, $changes)
 				</a>
 				on <?=$change->date_created->format(AS_DATE)?>
 				at <?=$change->date_created->format(AS_TIME)?>
-				from <?=$change->remote_addr?>
+				from <?=$change->remote_ip?>
 				(<a href="?<?=$slug?>[<?=$change->prev_id?>]&<?=$slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
 			</li>
 		<?php endforeach ?>
