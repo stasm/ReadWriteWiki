@@ -2,6 +2,7 @@
 const DB_NAME = '../wiki.db';
 const MAIN_PAGE = 'HomePage';
 const RE_PAGE_TITLE = '/\b((\p{Lu}\p{Ll}+){2,})\b/u';
+const RE_PAGE_LINK = '/\b((\p{Lu}\p{Ll}+){2,}(=[a-z]+)?)\b/u';
 const RE_BEFORE_UPPER = '/(?=\p{Lu})/u';
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
@@ -182,7 +183,7 @@ class Revision
 	private function Linkify($text)
 	{
 		return preg_replace(
-				RE_PAGE_TITLE,
+				RE_PAGE_LINK,
 				"<a href=\"?$this->slug&$1\">$1</a>",
 				$text);
 	}
