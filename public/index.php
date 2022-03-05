@@ -108,7 +108,7 @@ class Revision
 
 				$line = substr($line, 1);
 				$line = htmlentities($line);
-				$line = $this->Strongify($line);
+				$line = $this->Inline($line);
 				$line = $this->Linkify($line);
 				yield '<li>' . $line . '</li>';
 				continue;
@@ -142,7 +142,7 @@ class Revision
 
 				$line = substr($line, 1);
 				$line = htmlentities($line);
-				$line = $this->Strongify($line);
+				$line = $this->Inline($line);
 				$line = $this->Linkify($line);
 				yield '<blockquote>' . $line . '</blockquote>';
 				continue;
@@ -160,7 +160,7 @@ class Revision
 				}
 
 				$line = htmlentities($line);
-				$line = $this->Strongify($line);
+				$line = $this->Inline($line);
 				$line = $this->Linkify($line);
 				yield '<p>' . $line . '</p>';
 				continue;
@@ -188,11 +188,11 @@ class Revision
 				$text);
 	}
 
-	private function Strongify($text)
+	private function Inline($text)
 	{
 		return preg_replace(
-				array('/\b_(.+?)_\b/', '/`(.+?)`/'),
-				array('<strong>$1</strong>', '<code>$1</code>'),
+				array('/\b_(.+?)_\b/', '/&quot;(.+?)&quot;/', '/`(.+?)`/'),
+				array('<strong>$1</strong>', '<em>$1</em>', '<code>$1</code>'),
 				$text);
 	}
 }
