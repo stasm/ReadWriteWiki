@@ -200,7 +200,7 @@ function starts_with($string, $prefix) {
 	return substr($string, 0, strlen($prefix)) == $prefix;
 }
 
-function view_read($state, $slug)
+function view_read($state, $slug, $mode)
 {
 	$statement = $state->pdo->prepare('
 		SELECT id, slug, body, time_created
@@ -214,8 +214,16 @@ function view_read($state, $slug)
 
 	if (!$page) {
 		render_not_found($slug);
-	} else {
-		render_page($page, $state);
+		return;
+	}
+
+	switch ($mode) {
+	case 'text':
+		render_page_text($page, $state);
+		break;
+	case 'html':
+		render_page_html($page, $state);
+		break;
 	}
 }
 
@@ -322,7 +330,9 @@ case 'GET':
 		exit;
 	}
 
-	render_head();
+	$mode = 'html';
+	ob_start();
+
 	foreach ($_GET as $slug => $action) {
 		if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_TITLE]])) {
 			render_not_valid($slug);
@@ -341,7 +351,7 @@ case 'GET':
 				case 'edit':
 					view_restore($state, $slug, $id);
 					break;
-				case 'read':
+				case 'html':
 				default:
 					view_revision($state, $slug, $id);
 				}
@@ -357,13 +367,29 @@ case 'GET':
 			case 'backlinks':
 				view_backlinks($state, $slug);
 				break;
-			case 'read':
+			case 'html':
+			case 'text':
+				$mode = $action;
+				view_read($state, $slug, $action);
+				break;
 			default:
-				view_read($state, $slug);
+				view_read($state, $slug, 'html');
 			}
 		}
 	}
-	render_end();
+
+	switch ($mode) {
+	case 'text':
+		header('Content-Type: text/plain;');
+		ob_end_flush();
+		break;
+	case 'html':
+		render_head_html();
+		ob_end_flush();
+		render_end_html();
+		break;
+	}
+
 	break;
 case 'POST':
 	$honeypot = filter_input(INPUT_POST, 'user');
@@ -402,7 +428,7 @@ case 'POST':
 
 // Rendering templates
 
-function render_head()
+function render_head_html()
 {
 	$panels = array();
 	foreach ($_GET as $slug => $action) {
@@ -489,7 +515,7 @@ function render_head()
 	<body onload="window.scrollBy({left: window.innerWidth, behavior: 'smooth'})">
 <?php }
 
-function render_end()
+function render_end_html()
 { ?>
 	</body>
 <?php }
@@ -528,7 +554,7 @@ function render_not_found($slug, $id = null)
 	</article>
 <?php }
 
-function render_page($page, $state)
+function render_page_html($page, $state)
 { ?>
 	<article>
 	<?php if ($state->revision_created): ?>
@@ -554,6 +580,15 @@ function render_page($page, $state)
 		</footer>
 	</article>
 <?php }
+
+function render_page_text($page, $state)
+{
+	echo "===$page->title [{$page->date_created->format(AS_DATE)}]
+
+$page->body
+
+";
+}
 
 function render_revision($page)
 { ?>
