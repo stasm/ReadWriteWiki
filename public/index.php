@@ -636,6 +636,10 @@ function render_edit($page)
 			<input type="text" name="user" placeholder="Leave this empty.">
 			<button type="submit">Save</button>
 		</form>
+
+		<footer class="meta">
+			<a href="?">home</a>
+		</footer>
 	</article>
 <?php }
 
@@ -659,6 +663,10 @@ function render_history($slug, $changes)
 			</li>
 		<?php endforeach ?>
 		</ul>
+
+		<footer class="meta">
+			<a href="?">home</a>
+		</footer>
 	</article>
 <?php }
 
@@ -676,5 +684,9 @@ function render_backlinks($slug, $references)
 			</li>
 		<?php endforeach ?>
 		</ul>
+
+		<footer class="meta">
+			<a href="?">home</a>
+		</footer>
 	</article>
 <?php }
