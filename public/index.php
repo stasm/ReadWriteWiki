@@ -313,10 +313,10 @@ function view_backlinks($state, $slug)
 	$statement = $state->pdo->prepare('
 		SELECT slug, body, time_created
 		FROM latest
-		WHERE body LIKE ?
+		WHERE slug != ? AND body LIKE ?
 	;');
 
-	$statement->execute(array("%$slug%"));
+	$statement->execute(array($slug, "%$slug%"));
 	$references = $statement->fetchAll(PDO::FETCH_OBJ);
 	render_backlinks($slug, $references);
 }
