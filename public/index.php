@@ -11,6 +11,7 @@ class State
 {
 	public $pdo;
 	public $revision_created = false;
+	public $content_type = 'html';
 
 	public function __construct()
 	{
@@ -19,6 +20,17 @@ class State
 		if (isset($_SESSION['revision_created'])) {
 			$this->revision_created = $_SESSION['revision_created'];
 			unset($_SESSION['revision_created']);
+		}
+	}
+
+	public function __invoke($buffer)
+	{
+		switch ($this->content_type) {
+		case 'text':
+			header('Content-Type: text/plain;');
+			return $buffer;
+		case 'html':
+			return wrap_html($buffer);
 		}
 	}
 }
@@ -331,8 +343,7 @@ case 'GET':
 		exit;
 	}
 
-	$mode = 'html';
-	ob_start();
+	ob_start($state);
 
 	foreach ($_GET as $slug => $action) {
 		if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_TITLE]])) {
@@ -370,7 +381,7 @@ case 'GET':
 				break;
 			case 'html':
 			case 'text':
-				$mode = $action;
+				$state->content_type = $action;
 				view_read($state, $slug, $action);
 				break;
 			default:
@@ -379,18 +390,7 @@ case 'GET':
 		}
 	}
 
-	switch ($mode) {
-	case 'text':
-		header('Content-Type: text/plain;');
-		ob_end_flush();
-		break;
-	case 'html':
-		render_head_html();
-		ob_end_flush();
-		render_end_html();
-		break;
-	}
-
+	ob_end_flush();
 	break;
 case 'POST':
 	$honeypot = filter_input(INPUT_POST, 'user');
@@ -429,7 +429,7 @@ case 'POST':
 
 // Rendering templates
 
-function render_head_html()
+function wrap_html($buffer)
 {
 	$panels = array();
 	foreach ($_GET as $slug => $action) {
@@ -442,9 +442,12 @@ function render_head_html()
 			$panels[] = $slug;
 		}
 	}
-?>
-	<!doctype html>
-	<title><?=htmlentities(implode(' & ', $panels))?></title>
+
+	$title = htmlentities(implode(' & ', $panels));
+	return <<<EOF
+<!doctype html>
+<html>
+	<title>$title</title>
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -513,13 +516,12 @@ function render_head_html()
 			}
 		</style>
 	</head>
-	<body onload="window.scrollBy({left: window.innerWidth, behavior: 'smooth'})">
-<?php }
-
-function render_end_html()
-{ ?>
+	<body onload="window.scrollTo(document.body.scrollWidth, 0);">
+$buffer
 	</body>
-<?php }
+</html>
+EOF;
+}
 
 function render_not_valid($slug, $id = null)
 { ?>
