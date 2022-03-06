@@ -597,6 +597,7 @@ function render_page_html($page, $state)
 			<a href="?">home</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
+			<a href="?<?=$page->slug?>=text">text</a>
 			<a href="?<?=$page->slug?>=edit">edit</a>
 		</footer>
 	</article>
