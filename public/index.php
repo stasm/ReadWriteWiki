@@ -12,6 +12,7 @@ class State
 	public $pdo;
 	public $revision_created = false;
 	public $content_type = 'html';
+	public $nav_trail = array();
 
 	public function __construct()
 	{
@@ -64,6 +65,7 @@ class Revision
 	public $body;
 	public $date_created;
 
+	private $state;
 	private $time_created;
 
 	public function __construct($slug = null)
@@ -78,6 +80,11 @@ class Revision
 
 		$words = preg_split(RE_BEFORE_UPPER, $this->slug);
 		$this->title = implode(' ', $words);
+	}
+
+	public function Anchor($state)
+	{
+		$this->state = $state;
 	}
 
 	public function IntoHtml()
@@ -194,9 +201,10 @@ class Revision
 
 	private function Linkify($text)
 	{
+		$breadcrumbs = implode('&', $this->state->nav_trail);
 		return preg_replace(
 				RE_PAGE_LINK,
-				"<a href=\"?$this->slug&$1\">$1</a>",
+				"<a href=\"?$breadcrumbs&$1\">$1</a>",
 				$text);
 	}
 
@@ -230,6 +238,7 @@ function view_read($state, $slug, $mode)
 		return;
 	}
 
+	$page->Anchor($state);
 	switch ($mode) {
 	case 'text':
 		render_page_text($page, $state);
@@ -255,6 +264,7 @@ function view_revision($state, $slug, $id)
 	if (!$page) {
 		render_not_found($slug, $id);
 	} else {
+		$page->Anchor($state);
 		render_revision($page);
 	}
 }
@@ -359,6 +369,11 @@ case 'GET':
 					continue;
 				}
 
+				$slugid = "${slug}[$id]";
+				if (!in_array($slugid, $state->nav_trail)) {
+					$state->nav_trail[] = $slugid;
+				}
+
 				switch ($action) {
 				case 'edit':
 					view_restore($state, $slug, $id);
@@ -369,6 +384,10 @@ case 'GET':
 				}
 			}
 		} else {
+			if (!in_array($slug, $state->nav_trail)) {
+				$state->nav_trail[] = $slug;
+			}
+
 			switch ($action) {
 			case 'edit':
 				view_edit($state, $slug);
@@ -453,9 +472,8 @@ function wrap_html($buffer)
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<style>
 			body {
-				display: flex;
+				display: inline-flex;
 				align-items: flex-start;
-				gap: 15px;
 			}
 
 			h1 a {
