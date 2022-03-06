@@ -1,9 +1,9 @@
 <?php
 const DB_NAME = '../wiki.db';
 const MAIN_PAGE = 'HomePage';
-const RE_PAGE_TITLE = '/\b((\p{Lu}\p{Ll}+){2,})\b/u';
-const RE_PAGE_LINK = '/\b((\p{Lu}\p{Ll}+){2,}(=[a-z]+)?)\b/u';
-const RE_BEFORE_UPPER = '/(?=\p{Lu})/u';
+const RE_PAGE_SLUG = '/\b((\p{Lu}\p{Ll}+)(\p{Lu}\p{Ll}+|\d+)+)\b/u';
+const RE_PAGE_LINK = '/\b((\p{Lu}\p{Ll}+)(\p{Lu}\p{Ll}+|\d+)+(=[a-z]+)?)\b/u';
+const RE_WORD_BOUNDARY = '/((?<=\p{Ll}|\d)(?=\p{Lu})|(?<=\p{Ll})(?=\d))/u';
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
 
@@ -78,7 +78,7 @@ class Revision
 			$this->slug = $slug;
 		}
 
-		$words = preg_split(RE_BEFORE_UPPER, $this->slug);
+		$words = preg_split(RE_WORD_BOUNDARY, $this->slug);
 		$this->title = implode(' ', $words);
 	}
 
@@ -356,7 +356,7 @@ case 'GET':
 	ob_start($state);
 
 	foreach ($_GET as $slug => $action) {
-		if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_TITLE]])) {
+		if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_SLUG]])) {
 			render_not_valid($slug);
 			continue;
 		}
@@ -422,7 +422,7 @@ case 'POST':
 	$time = date('U');
 	$addr = inet_pton($_SERVER['REMOTE_ADDR']);
 	$slug = filter_input(INPUT_POST, 'slug');
-	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_TITLE]])) {
+	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_SLUG]])) {
 		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
 		exit();
 	}
@@ -605,7 +605,7 @@ function render_page_html($page, $state)
 
 function render_page_text($page, $state)
 {
-	echo "===$page->title [{$page->date_created->format(AS_DATE)}]
+	echo "=== $page->title [{$page->date_created->format(AS_DATE)}]
 
 $page->body
 
