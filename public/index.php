@@ -1,11 +1,13 @@
 <?php
 const DB_NAME = '../wiki.db';
 const MAIN_PAGE = 'HomePage';
-const RE_PAGE_SLUG = '/\b((\p{Lu}\p{Ll}+)(\p{Lu}\p{Ll}+|\d+)+)\b/u';
-const RE_PAGE_LINK = '/\b((\p{Lu}\p{Ll}+)(\p{Lu}\p{Ll}+|\d+)+(=[a-z]+)?)\b/u';
-const RE_WORD_BOUNDARY = '/((?<=\p{Ll}|\d)(?=\p{Lu})|(?<=\p{Ll})(?=\d))/u';
+
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
+
+const RE_PAGE_SLUG = '/\b(\p{Lu}\p{Ll}+(\p{Lu}\p{Ll}+|\d+)+)\b/u';
+const RE_PAGE_LINK = '/\b(\p{Lu}\p{Ll}+(\p{Lu}\p{Ll}+|\d+)+)(\[(.+?)\]|=([a-z]+)\b)?/u';
+const RE_WORD_BOUNDARY = '/((?<=\p{Ll}|\d)(?=\p{Lu})|(?<=\p{Ll})(?=\d))/u';
 
 class State
 {
@@ -202,10 +204,18 @@ class Revision
 	private function Linkify($text)
 	{
 		$breadcrumbs = implode('&', $this->state->nav_trail);
-		return preg_replace(
+		return preg_replace_callback(
 				RE_PAGE_LINK,
-				"<a href=\"?$breadcrumbs&$1\">$1</a>",
-				$text);
+				function($matches) use($breadcrumbs) {
+					$slug = $matches[1];
+					if ($action = $matches[5]) {
+						return "<a href=\"?$breadcrumbs&$slug=$action\">$slug=$action</a>";
+					}
+					$text = $matches[4] ?? $slug;
+					return "<a href=\"?$breadcrumbs&$slug\">$text</a>";
+				},
+				$text,
+				-1, $count, PREG_UNMATCHED_AS_NULL);
 	}
 
 	private function Inline($text)
