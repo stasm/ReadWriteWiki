@@ -117,7 +117,7 @@ class Revision
 				continue;
 			}
 
-			if (starts_with($line, '*')) {
+			if (starts_with($line, '* ')) {
 				if ($inside_pre) {
 					$inside_pre = false;
 					yield '</pre>';
@@ -151,7 +151,7 @@ class Revision
 				continue;
 			}
 
-			if (starts_with($line, '>')) {
+			if (starts_with($line, '> ')) {
 				if ($inside_list) {
 					$inside_list = false;
 					yield '</ul>';
@@ -221,7 +221,7 @@ class Revision
 	private function Inline($text)
 	{
 		return preg_replace(
-				array('/\b_(.+?)_\b/', '/&quot;(.+?)&quot;/', '/`(.+?)`/'),
+				array('/\*([^ ](.*?[^ ])?)\*/', '/&quot;(.+?)&quot;/', '/`(.+?)`/'),
 				array('<strong>$1</strong>', '<em>$1</em>', '<code>$1</code>'),
 				$text);
 	}
