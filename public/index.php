@@ -593,12 +593,15 @@ function render_page_html($page, $state)
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
-			last modified on <?=$page->date_created->format(AS_DATE)?><br>
-			<a href="?">home</a>
+			last modified on <?=$page->date_created->format(AS_DATE)?>
+			<a href="?<?=$page->slug?>=edit">edit</a>
+			<br>
+			<a href="?<?=$page->slug?>">permalink</a>
+			<a href="?<?=$page->slug?>=text">text</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
-			<a href="?<?=$page->slug?>=text">text</a>
-			<a href="?<?=$page->slug?>=edit">edit</a>
+			<br>
+			<a href="?">home</a>
 		</footer>
 	</article>
 <?php }
@@ -625,12 +628,14 @@ function render_revision($page)
 
 		<footer class="meta">
 			revision <?=$page->id?> from <?=$page->date_created->format(AS_DATE)?>
-			<a href="?<?=$page->slug?>[<?=$page->id?>]=edit">restore?</a>
+			<a href="?<?=$page->slug?>[<?=$page->id?>]=edit">restore</a>
 			<br>
-			<a href="?">home</a>
+			<a href="?<?=$page->slug?>[<?=$page->id?>]">permalink</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
 			<a href="?<?=$page->slug?>">latest</a>
+			<br>
+			<a href="?">home</a>
 		</footer>
 
 	</article>
