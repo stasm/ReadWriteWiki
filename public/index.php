@@ -251,15 +251,15 @@ function view_read($state, $slug, $mode)
 	$page->Anchor($state);
 	switch ($mode) {
 	case 'text':
-		render_page_text($page, $state);
+		render_source($page);
 		break;
 	case 'html':
-		render_page_html($page, $state);
+		render_latest($page, $state);
 		break;
 	}
 }
 
-function view_revision($state, $slug, $id)
+function view_revision($state, $slug, $id, $mode)
 {
 	$statement = $state->pdo->prepare('
 		SELECT id, slug, body, time_created
@@ -273,9 +273,17 @@ function view_revision($state, $slug, $id)
 
 	if (!$page) {
 		render_not_found($slug, $id);
-	} else {
-		$page->Anchor($state);
+		return;
+	}
+
+	$page->Anchor($state);
+	switch ($mode) {
+	case 'text':
+		render_source($page);
+		break;
+	case 'html':
 		render_revision($page);
+		break;
 	}
 }
 
@@ -388,9 +396,13 @@ case 'GET':
 				case 'edit':
 					view_restore($state, $slug, $id);
 					break;
+				case 'text':
 				case 'html':
+					$state->content_type = $action;
+					view_revision($state, $slug, $id, $action);
+					break;
 				default:
-					view_revision($state, $slug, $id);
+					view_revision($state, $slug, $id, 'html');
 				}
 			}
 		} else {
@@ -585,7 +597,16 @@ function render_not_found($slug, $id = null)
 	</article>
 <?php }
 
-function render_page_html($page, $state)
+function render_source($page)
+{
+	echo "=== $page->title [$page->id] {$page->date_created->format(AS_DATE)}
+
+$page->body
+
+";
+}
+
+function render_latest($page, $state)
 { ?>
 	<article>
 	<?php if ($state->revision_created): ?>
@@ -616,15 +637,6 @@ function render_page_html($page, $state)
 	</article>
 <?php }
 
-function render_page_text($page, $state)
-{
-	echo "=== $page->title [{$page->date_created->format(AS_DATE)}]
-
-$page->body
-
-";
-}
-
 function render_revision($page)
 { ?>
 	<article style="background:honeydew">
@@ -641,6 +653,7 @@ function render_revision($page)
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=edit">restore</a>
 			<br>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]">permalink</a>
+			<a href="?<?=$page->slug?>[<?=$page->id?>]=text">text</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
 			<a href="?<?=$page->slug?>">latest</a>
