@@ -1,6 +1,7 @@
 <?php
 const DB_NAME = '../wiki.db';
 const MAIN_PAGE = 'HomePage';
+const HELP_PAGE = 'WikiHelp';
 
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
@@ -575,6 +576,7 @@ function render_not_valid($slug, $id = null)
 	<?php endif ?>
 		<footer class="meta">
 			<a href="?">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
 		</footer>
 	</article>
 <?php }
@@ -590,8 +592,10 @@ function render_not_found($slug, $id = null)
 		<p><?=$slug?> doesn't exist yet. <a href="?<?=$slug?>=edit">Create?</a></p>
 
 		<footer class="meta">
-			<a href="?">home</a>
 			<a href="?<?=$slug?>=backlinks">backlinks</a>
+			<br>
+			<a href="?">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
 		</footer>
 	<?php endif ?>
 	</article>
@@ -633,6 +637,7 @@ function render_latest($page, $state)
 			<a href="?<?=$page->slug?>=history">history</a>
 			<br>
 			<a href="?">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
 		</footer>
 	</article>
 <?php }
@@ -659,6 +664,7 @@ function render_revision($page)
 			<a href="?<?=$page->slug?>">latest</a>
 			<br>
 			<a href="?">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
 		</footer>
 
 	</article>
@@ -688,6 +694,7 @@ function render_edit($page)
 
 		<footer class="meta">
 			<a href="?">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
 		</footer>
 	</article>
 <?php }
@@ -715,6 +722,7 @@ function render_history($slug, $changes)
 
 		<footer class="meta">
 			<a href="?">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
 		</footer>
 	</article>
 <?php }
@@ -736,6 +744,7 @@ function render_backlinks($slug, $references)
 
 		<footer class="meta">
 			<a href="?">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
 		</footer>
 	</article>
 <?php }
