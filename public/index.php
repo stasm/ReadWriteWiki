@@ -204,11 +204,18 @@ class Revision
 
 	private function Linkify($text)
 	{
-		$breadcrumbs = implode('&', $this->state->nav_trail);
+		$trail = $this->state->nav_trail;
 		return preg_replace_callback(
 				RE_PAGE_LINK,
-				function($matches) use($breadcrumbs) {
+				function($matches) use($trail) {
 					$slug = $matches[1];
+					$index = array_search($slug, $trail);
+					if ($index !== false) {
+						// The page is already in the navigation trail.
+						// Truncate the trail up to it.
+						$trail = array_slice($trail, 0, $index);
+					}
+					$breadcrumbs = implode('&', $trail);
 					if ($action = $matches[5]) {
 						return "<a href=\"?$breadcrumbs&$slug=$action\">$slug=$action</a>";
 					}
