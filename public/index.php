@@ -215,12 +215,13 @@ class Revision
 						// Truncate the trail up to it.
 						$trail = array_slice($trail, 0, $index);
 					}
+					$trail[] = $slug;
 					$breadcrumbs = implode('&', $trail);
 					if ($action = $matches[5]) {
-						return "<a href=\"?$breadcrumbs&$slug=$action\">$slug=$action</a>";
+						return "<a href=\"?$breadcrumbs=$action\">$slug=$action</a>";
 					}
 					$text = $matches[4] ?? $slug;
-					return "<a href=\"?$breadcrumbs&$slug\">$text</a>";
+					return "<a href=\"?$breadcrumbs\">$text</a>";
 				},
 				$text,
 				-1, $count, PREG_UNMATCHED_AS_NULL);
