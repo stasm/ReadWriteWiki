@@ -618,7 +618,9 @@ $page->body
 }
 
 function render_latest($page, $state)
-{ ?>
+{
+	$breadcrumbs = implode('&', $state->nav_trail);
+?>
 	<article>
 	<?php if ($state->revision_created): ?>
 		<header class="meta" style="background:cornsilk">
@@ -627,7 +629,7 @@ function render_latest($page, $state)
 	<?php endif ?>
 
 		<h1>
-			<a href="?<?=$page->slug?>">
+			<a href="?<?=$breadcrumbs?>">
 				<?=$page->title?>
 			</a>
 		</h1>
