@@ -628,7 +628,9 @@ function render_latest($page, $state)
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
-			last modified on <?=$page->date_created->format(AS_DATE)?>
+			last modified on <span title="<?=$page->date_created->format(AS_TIME)?>">
+				<?=$page->date_created->format(AS_DATE)?>
+			</span>
 			<a href="?<?=$page->slug?>=edit">edit</a>
 			<br>
 			<a href="?<?=$page->slug?>">permalink</a>
@@ -654,7 +656,9 @@ function render_revision($page)
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
-			revision <?=$page->id?> from <?=$page->date_created->format(AS_DATE)?>
+			revision <?=$page->id?> from <span title="<?=$page->date_created->format(AS_TIME)?>">
+				<?=$page->date_created->format(AS_DATE)?>
+			</span>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=edit">restore</a>
 			<br>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]">permalink</a>
