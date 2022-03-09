@@ -171,6 +171,12 @@ class Revision
 			}
 
 			$line = trim($line);
+
+			if (preg_match('#^https?://.*\.(jpg|jpeg|png|gif|webp)$#', $line)) {
+				yield "<figure><img src=\"$line\"/></figure>";
+				continue;
+			}
+
 			if ($line != '') {
 				if ($inside_list) {
 					$inside_list = false;
@@ -532,6 +538,16 @@ function wrap_html($buffer)
 			article blockquote {
 				margin-inline-start: 1rem;
 				font-style: italic;
+			}
+
+			article figure {
+				margin: 0;
+			}
+
+			article img {
+				display: block;
+				width: 100%;
+				object-fit: cover;
 			}
 
 			article pre {
