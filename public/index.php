@@ -37,6 +37,16 @@ class State
 			return wrap_html($buffer);
 		}
 	}
+
+	public function PageExists($slug)
+	{
+		$statement = $this->pdo->prepare('
+			SELECT 1 FROM latest WHERE slug = ?
+		;');
+
+		$statement->execute(array($slug));
+		return (bool)$statement->fetch();
+	}
 }
 
 class Change
@@ -210,11 +220,13 @@ class Revision
 
 	private function Linkify($text)
 	{
+		$state = $this->state;
 		$trail = $this->state->nav_trail;
 		return preg_replace_callback(
 				RE_PAGE_LINK,
-				function($matches) use($trail) {
+				function($matches) use(&$state, $trail) {
 					$slug = $matches[1];
+					$missing = $state->PageExists($slug) ? '' : 'data-missing';
 					$index = array_search($slug, $trail);
 					if ($index !== false) {
 						// The page is already in the navigation trail.
@@ -224,10 +236,10 @@ class Revision
 					$trail[] = $slug;
 					$breadcrumbs = implode('&', $trail);
 					if ($action = $matches[5]) {
-						return "<a href=\"?$breadcrumbs=$action\">$slug=$action</a>";
+						return "<a $missing href=\"?$breadcrumbs=$action\">$slug=$action</a>";
 					}
 					$text = $matches[4] ?? $slug;
-					return "<a href=\"?$breadcrumbs\">$text</a>";
+					return "<a $missing href=\"?$breadcrumbs\">$text</a>";
 				},
 				$text,
 				-1, $count, PREG_UNMATCHED_AS_NULL);
@@ -562,6 +574,10 @@ function wrap_html($buffer)
 
 			article a {
 				text-decoration: none;
+			}
+
+			article a[data-missing] {
+				color: firebrick;
 			}
 
 			.meta {
