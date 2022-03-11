@@ -677,7 +677,7 @@ function render_latest($page, $state)
 			</span>
 			<a href="?<?=$page->slug?>=edit">edit</a>
 			<br>
-			<a href="?<?=$page->slug?>">permalink</a>
+			<a href="?<?=$page->slug?>">html</a>
 			<a href="?<?=$page->slug?>=text">text</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
@@ -706,10 +706,10 @@ function render_revision($page)
 			</span>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=edit">restore</a>
 			<br>
-			<a href="?<?=$page->slug?>[<?=$page->id?>]">permalink</a>
+			<a href="?<?=$page->slug?>[<?=$page->id?>]">html</a>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=text">text</a>
-			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
-			<a href="?<?=$page->slug?>=history">history</a>
+			<a href="?<?=$page->slug?>[<?=$page->id?>]=backlinks">backlinks</a>
+			<a href="?<?=$page->slug?>[<?=$page->id?>]=history">history</a>
 			<a href="?<?=$page->slug?>">latest</a>
 			<br>
 			<a href="?">home</a>
