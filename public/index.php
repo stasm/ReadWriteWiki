@@ -732,6 +732,11 @@ function render_history($slug, $changes)
 		</ul>
 
 		<footer class="meta">
+			<a href="?<?=$slug?>">html</a>
+			<a href="?<?=$slug?>=text">text</a>
+			<a href="?<?=$slug?>=backlinks">backlinks</a>
+			<a href="?<?=$slug?>=history">history</a>
+			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 		</footer>
@@ -754,6 +759,11 @@ function render_backlinks($slug, $references)
 		</ul>
 
 		<footer class="meta">
+			<a href="?<?=$slug?>">html</a>
+			<a href="?<?=$slug?>=text">text</a>
+			<a href="?<?=$slug?>=backlinks">backlinks</a>
+			<a href="?<?=$slug?>=history">history</a>
+			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 		</footer>
