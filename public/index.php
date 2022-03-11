@@ -2,6 +2,7 @@
 const DB_NAME = '../wiki.db';
 const MAIN_PAGE = 'HomePage';
 const HELP_PAGE = 'WikiHelp';
+const RECENT_CHANGES = 'RecentChanges';
 
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
@@ -53,6 +54,7 @@ class Change
 {
 	public $id;
 	public $prev_id;
+	public $slug;
 	public $date_created;
 	public $remote_ip;
 	public $size;
@@ -358,6 +360,30 @@ function view_backlinks($state, $slug, $id)
 	render_backlinks($slug, $references);
 }
 
+function view_recent_changes($state, $p = 0)
+{
+	if ($p > 0) {
+		render_not_valid(RECENT_CHANGES, null, $p);
+		return;
+	}
+
+	$limit = 25;
+	$statement = $state->pdo->prepare('
+		SELECT
+			id, slug, time_created, remote_addr, size,
+			LEAD(id, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_id,
+			LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size
+		FROM changelog
+		ORDER BY id DESC
+		LIMIT ? OFFSET ?
+	;');
+
+	$statement->execute(array($limit, $limit * $p * -1));
+	$statement->setFetchMode(PDO::FETCH_CLASS, 'Change');
+	$changes = $statement->fetchAll();
+	render_recent_changes($p, $changes);
+}
+
 session_start();
 $state = new State();
 
@@ -401,6 +427,12 @@ case 'GET':
 			if (!in_array($slugid, $state->nav_trail)) {
 				$state->nav_trail[] = $slugid;
 			}
+		}
+
+		switch ($slug) {
+		case RECENT_CHANGES:
+			view_recent_changes($state, $id);
+			return;
 		}
 
 		switch ($action) {
@@ -569,12 +601,15 @@ $buffer
 EOF;
 }
 
-function render_not_valid($slug, $id = null)
+function render_not_valid($slug, $id = null, $p = null)
 { ?>
 	<article class="meta" style="background:mistyrose">
 	<?php if ($id !== null): ?>
 		<h1>Invalid Revision</h1>
 		<p><?=htmlentities($slug)?>[<?=htmlentities($id)?>] is not a valid revision.</p>
+	<?php elseif ($p !== null): ?>
+		<h1>Invalid Range</h1>
+		<p><?=htmlentities($slug)?>[<?=htmlentities($p)?>] is not a valid range offset.</p>
 	<?php else: ?>
 		<h1>Invalid Page Name </h1>
 		<p><?=htmlentities($slug)?> is not a valid page name.</p>
@@ -582,6 +617,7 @@ function render_not_valid($slug, $id = null)
 		<footer class="meta">
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
 	</article>
 <?php }
@@ -602,6 +638,7 @@ function render_not_found($slug, $id = null)
 			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
 	</article>
 <?php }
@@ -647,6 +684,7 @@ function render_latest($page, $state)
 			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
 	</article>
 <?php }
@@ -676,6 +714,7 @@ function render_revision($page)
 			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
 
 	</article>
@@ -706,6 +745,7 @@ function render_edit($page)
 		<footer class="meta">
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
 	</article>
 <?php }
@@ -739,6 +779,7 @@ function render_history($slug, $changes)
 			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
 	</article>
 <?php }
@@ -766,6 +807,42 @@ function render_backlinks($slug, $references)
 			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
+		</footer>
+	</article>
+<?php }
+
+function render_recent_changes($p, $changes)
+{
+	$next = $p - 1;
+?>
+	<article style="background:aliceblue">
+		<h1 class="meta">
+			Recent Changes
+		</h1>
+
+		<ul>
+		<?php foreach ($changes as $change): ?>
+			<li>
+				<a href="?<?=$change->slug?>[<?=$change->id?>]">
+					<?=$change->slug?>[<?=$change->id?>]
+				</a>
+				on <?=$change->date_created->format(AS_DATE)?>
+				at <?=$change->date_created->format(AS_TIME)?>
+				from <?=$change->remote_ip?>
+				(<a href="?<?=$change->slug?>[<?=$change->prev_id?>]&<?=$change->slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
+			</li>
+		<?php endforeach ?>
+		</ul>
+
+		<p>
+			<a href="?<?=RECENT_CHANGES?>[<?=$next?>]">next</a>
+		</p>
+
+		<footer class="meta">
+			<a href="?">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
 	</article>
 <?php }
