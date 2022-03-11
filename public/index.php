@@ -258,43 +258,19 @@ function starts_with($string, $prefix) {
 	return substr($string, 0, strlen($prefix)) == $prefix;
 }
 
-function view_read($state, $slug, $mode)
+function view_revision($state, $slug, $mode, $id = null)
 {
-	$statement = $state->pdo->prepare('
+	$statement = $state->pdo->prepare($id ? '
+		SELECT id, slug, body, time_created
+		FROM revisions
+		WHERE slug = ? AND id = ?
+	;' : '
 		SELECT id, slug, body, time_created
 		FROM latest
 		WHERE slug = ?
 	;');
 
-	$statement->execute(array($slug));
-	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
-	$page = $statement->fetch();
-
-	if (!$page) {
-		render_not_found($slug);
-		return;
-	}
-
-	$page->Anchor($state);
-	switch ($mode) {
-	case 'text':
-		render_source($page);
-		break;
-	case 'html':
-		render_latest($page, $state);
-		break;
-	}
-}
-
-function view_revision($state, $slug, $id, $mode)
-{
-	$statement = $state->pdo->prepare('
-		SELECT id, slug, body, time_created
-		FROM revisions
-		WHERE slug = ? AND id = ?
-	;');
-
-	$statement->execute(array($slug, $id));
+	$statement->execute($id ? array($slug, $id) : array($slug));
 	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
 	$page = $statement->fetch();
 
@@ -304,13 +280,13 @@ function view_revision($state, $slug, $id, $mode)
 	}
 
 	$page->Anchor($state);
-	switch ($mode) {
-	case 'text':
+
+	if ($mode === 'text') {
 		render_source($page);
-		break;
-	case 'html':
+	} elseif ($id === null) {
+		render_latest($page, $state);
+	} else {
 		render_revision($page);
-		break;
 	}
 }
 
@@ -441,10 +417,10 @@ case 'GET':
 			case 'html':
 			case 'text':
 				$state->content_type = $action;
-				view_read($state, $slug, $action);
+				view_revision($state, $slug, $action);
 				continue 2;
 			default:
-				view_read($state, $slug, 'html');
+				view_revision($state, $slug, 'html');
 				continue 2;
 			}
 		} elseif (!filter_var($id, FILTER_VALIDATE_INT)) {
@@ -469,10 +445,10 @@ case 'GET':
 			case 'html':
 			case 'text':
 				$state->content_type = $action;
-				view_revision($state, $slug, $id, $action);
+				view_revision($state, $slug, $action, $id);
 				continue 2;
 			default:
-				view_revision($state, $slug, $id, 'html');
+				view_revision($state, $slug, 'html', $id);
 				continue 2;
 			}
 		}
