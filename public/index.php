@@ -290,42 +290,32 @@ function view_revision($state, $slug, $mode, $id = null)
 	}
 }
 
-function view_edit($state, $slug)
+function view_edit($state, $slug, $id = null)
 {
-	$statement = $state->pdo->prepare('
+	$statement = $state->pdo->prepare($id ? '
+		SELECT id, slug, body, time_created
+		FROM revisions
+		WHERE slug = ? AND id = ?
+	;' : '
 		SELECT slug, body, time_created
 		FROM latest
 		WHERE slug = ?
 	;');
 
-	$statement->execute(array($slug));
+	$statement->execute($id ? array($slug, $id) : array($slug));
 	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
 	$page = $statement->fetch();
 
 	if (!$page) {
+		if ($id !== null) {
+			render_not_found($slug, $id);
+			return;
+		}
+
 		$page = new Revision($slug);
 	}
 
 	render_edit($page);
-}
-
-function view_restore($state, $slug, $id)
-{
-	$statement = $state->pdo->prepare('
-		SELECT id, slug, body, time_created
-		FROM revisions
-		WHERE slug = ? AND id = ?
-	;');
-
-	$statement->execute(array($slug, $id));
-	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
-	$page = $statement->fetch();
-
-	if (!$page) {
-		render_not_found($slug, $id);
-	} else {
-		render_edit($page);
-	}
 }
 
 function view_history($state, $slug, $id = null)
@@ -434,7 +424,7 @@ case 'GET':
 
 			switch ($action) {
 			case 'edit':
-				view_restore($state, $slug, $id);
+				view_edit($state, $slug, $id);
 				continue 2;
 			case 'history':
 				view_history($state, $slug, $id);
