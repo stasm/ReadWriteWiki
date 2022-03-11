@@ -258,7 +258,7 @@ function starts_with($string, $prefix) {
 	return substr($string, 0, strlen($prefix)) == $prefix;
 }
 
-function view_revision($state, $slug, $mode, $id = null)
+function view_revision($state, $slug, $id, $mode)
 {
 	$statement = $state->pdo->prepare($id ? '
 		SELECT id, slug, body, time_created
@@ -290,7 +290,7 @@ function view_revision($state, $slug, $mode, $id = null)
 	}
 }
 
-function view_edit($state, $slug, $id = null)
+function view_edit($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare($id ? '
 		SELECT id, slug, body, time_created
@@ -318,7 +318,7 @@ function view_edit($state, $slug, $id = null)
 	render_edit($page);
 }
 
-function view_history($state, $slug, $id = null)
+function view_history($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare('
 		SELECT
@@ -341,7 +341,7 @@ function view_history($state, $slug, $id = null)
 	}
 }
 
-function view_backlinks($state, $slug, $id = null)
+function view_backlinks($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare($id ? '
 		SELECT DISTINCT slug
@@ -416,10 +416,10 @@ case 'GET':
 		case 'html':
 		case 'text':
 			$state->content_type = $action;
-			view_revision($state, $slug, $action, $id);
+			view_revision($state, $slug, $id, $action);
 			break;
 		default:
-			view_revision($state, $slug, 'html', $id);
+			view_revision($state, $slug, $id, 'html');
 		}
 	}
 
