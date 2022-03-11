@@ -41,6 +41,10 @@ class State
 
 	public function PageExists($slug)
 	{
+		if ($slug === RECENT_CHANGES) {
+			return true;
+		}
+
 		$statement = $this->pdo->prepare('
 			SELECT 1 FROM latest WHERE slug = ?
 		;');
