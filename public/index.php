@@ -352,7 +352,7 @@ function view_restore($state, $slug, $id)
 	}
 }
 
-function view_history($state, $slug)
+function view_history($state, $slug, $id = null)
 {
 	$statement = $state->pdo->prepare('
 		SELECT
@@ -360,11 +360,11 @@ function view_history($state, $slug)
 			LEAD(id, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_id,
 			LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size
 		FROM changelog
-		WHERE slug = ?
+		WHERE slug = ?' . ($id ? ' AND id <= ?' : '') . '
 		ORDER BY id DESC
 	;');
 
-	$statement->execute(array($slug));
+	$statement->execute($id ? array($slug, $id) : array($slug));
 	$statement->setFetchMode(PDO::FETCH_CLASS, 'Change');
 	$changes = $statement->fetchAll();
 
@@ -375,15 +375,19 @@ function view_history($state, $slug)
 	}
 }
 
-function view_backlinks($state, $slug)
+function view_backlinks($state, $slug, $id = null)
 {
-	$statement = $state->pdo->prepare('
-		SELECT slug, body, time_created
+	$statement = $state->pdo->prepare($id ? '
+		SELECT DISTINCT slug
+		FROM revisions
+		WHERE slug != ? AND body LIKE ? AND id <= ?
+	;' : '
+		SELECT slug
 		FROM latest
 		WHERE slug != ? AND body LIKE ?
 	;');
 
-	$statement->execute(array($slug, "%$slug%"));
+	$statement->execute($id ? array($slug, "%$slug%", $id) : array($slug, "%$slug%"));
 	$references = $statement->fetchAll(PDO::FETCH_OBJ);
 	render_backlinks($slug, $references);
 }
@@ -456,8 +460,14 @@ case 'GET':
 			case 'edit':
 				view_restore($state, $slug, $id);
 				continue 2;
-			case 'text':
+			case 'history':
+				view_history($state, $slug, $id);
+				continue 2;
+			case 'backlinks':
+				view_backlinks($state, $slug, $id);
+				continue 2;
 			case 'html':
+			case 'text':
 				$state->content_type = $action;
 				view_revision($state, $slug, $id, $action);
 				continue 2;
