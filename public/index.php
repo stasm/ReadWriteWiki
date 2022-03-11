@@ -399,40 +399,27 @@ case 'GET':
 	}
 
 	ob_start($state);
+	$panes = array();
 
+	// Normalize query parameters into (slug, id, action) tuples.
 	foreach ($_GET as $slug => $action) {
+		if (is_array($action)) {
+			$ids = $action;
+			foreach ($ids as $id => $action) {
+				$panes[] = ['slug' => $slug, 'id' => $id, 'action' => $action];
+			}
+		} else {
+			$panes[] = ['slug' => $slug, 'id' => null, 'action' => $action];
+		}
+	}
+
+	foreach ($panes as ['slug' => $slug, 'id' => $id, 'action' => $action]) {
 		if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_SLUG]])) {
 			render_not_valid($slug);
 			continue;
 		}
 
-		if (is_array($action)) {
-			$ids = $action;
-			foreach ($ids as $id => $action) {
-				if (!filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])) {
-					render_not_valid($slug, $id);
-					continue;
-				}
-
-				$slugid = "${slug}[$id]";
-				if (!in_array($slugid, $state->nav_trail)) {
-					$state->nav_trail[] = $slugid;
-				}
-
-				switch ($action) {
-				case 'edit':
-					view_restore($state, $slug, $id);
-					break;
-				case 'text':
-				case 'html':
-					$state->content_type = $action;
-					view_revision($state, $slug, $id, $action);
-					break;
-				default:
-					view_revision($state, $slug, $id, 'html');
-				}
-			}
-		} else {
+		if ($id === null) {
 			if (!in_array($slug, $state->nav_trail)) {
 				$state->nav_trail[] = $slug;
 			}
@@ -440,20 +427,43 @@ case 'GET':
 			switch ($action) {
 			case 'edit':
 				view_edit($state, $slug);
-				break;
+				continue 2;
 			case 'history':
 				view_history($state, $slug);
-				break;
+				continue 2;
 			case 'backlinks':
 				view_backlinks($state, $slug);
-				break;
+				continue 2;
 			case 'html':
 			case 'text':
 				$state->content_type = $action;
 				view_read($state, $slug, $action);
-				break;
+				continue 2;
 			default:
 				view_read($state, $slug, 'html');
+				continue 2;
+			}
+		} elseif (!filter_var($id, FILTER_VALIDATE_INT)) {
+			render_not_valid($slug, $id);
+			continue;
+		} else {
+			$slugid = "${slug}[$id]";
+			if (!in_array($slugid, $state->nav_trail)) {
+				$state->nav_trail[] = $slugid;
+			}
+
+			switch ($action) {
+			case 'edit':
+				view_restore($state, $slug, $id);
+				continue 2;
+			case 'text':
+			case 'html':
+				$state->content_type = $action;
+				view_revision($state, $slug, $id, $action);
+				continue 2;
+			default:
+				view_revision($state, $slug, $id, 'html');
+				continue 2;
 			}
 		}
 	}
