@@ -595,6 +595,7 @@ function render_not_found($slug, $id = null)
 	<?php else: ?>
 		<h1>Page Not Found</h1>
 		<p><?=$slug?> doesn't exist yet. <a href="?<?=$slug?>=edit">Create?</a></p>
+	<?php endif ?>
 
 		<footer class="meta">
 			<a href="?<?=$slug?>=backlinks">backlinks</a>
@@ -602,7 +603,6 @@ function render_not_found($slug, $id = null)
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 		</footer>
-	<?php endif ?>
 	</article>
 <?php }
 
