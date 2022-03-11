@@ -393,26 +393,6 @@ case 'GET':
 			if (!in_array($slug, $state->nav_trail)) {
 				$state->nav_trail[] = $slug;
 			}
-
-			switch ($action) {
-			case 'edit':
-				view_edit($state, $slug);
-				continue 2;
-			case 'history':
-				view_history($state, $slug);
-				continue 2;
-			case 'backlinks':
-				view_backlinks($state, $slug);
-				continue 2;
-			case 'html':
-			case 'text':
-				$state->content_type = $action;
-				view_revision($state, $slug, $action);
-				continue 2;
-			default:
-				view_revision($state, $slug, 'html');
-				continue 2;
-			}
 		} elseif (!filter_var($id, FILTER_VALIDATE_INT)) {
 			render_not_valid($slug, $id);
 			continue;
@@ -421,26 +401,25 @@ case 'GET':
 			if (!in_array($slugid, $state->nav_trail)) {
 				$state->nav_trail[] = $slugid;
 			}
+		}
 
-			switch ($action) {
-			case 'edit':
-				view_edit($state, $slug, $id);
-				continue 2;
-			case 'history':
-				view_history($state, $slug, $id);
-				continue 2;
-			case 'backlinks':
-				view_backlinks($state, $slug, $id);
-				continue 2;
-			case 'html':
-			case 'text':
-				$state->content_type = $action;
-				view_revision($state, $slug, $action, $id);
-				continue 2;
-			default:
-				view_revision($state, $slug, 'html', $id);
-				continue 2;
-			}
+		switch ($action) {
+		case 'edit':
+			view_edit($state, $slug, $id);
+			break;
+		case 'history':
+			view_history($state, $slug, $id);
+			break;
+		case 'backlinks':
+			view_backlinks($state, $slug, $id);
+			break;
+		case 'html':
+		case 'text':
+			$state->content_type = $action;
+			view_revision($state, $slug, $action, $id);
+			break;
+		default:
+			view_revision($state, $slug, 'html', $id);
 		}
 	}
 
