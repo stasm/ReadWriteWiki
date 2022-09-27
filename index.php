@@ -1,5 +1,5 @@
 <?php
-const DB_NAME = '../wiki.db';
+const DB_NAME = 'wiki.db';
 const MAIN_PAGE = 'HomePage';
 const HELP_PAGE = 'WikiHelp';
 const RECENT_CHANGES = 'RecentChanges';
