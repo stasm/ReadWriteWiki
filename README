@@ -1,0 +1,36 @@
+=== ReadWriteWiki
+
+ReadWriteWiki is a wiki that's designed to be very easy to deploy and maintain. It's inspired by the original WikiWikiWeb from 1995. All pages are editable by all users.
+
+ReadWriteWiki is written as a single-file PHP application. All the data is stored in a single-file SQLite3 database.
+
+--- Getting Started
+
+ $ curl -o https://raw.githubusercontent.com/stasm/ReadWriteWiki/main/index.php
+ $ curl https://raw.githubusercontent.com/stasm/ReadWriteWiki/main/schema.sql | sqlite3 wiki.db
+
+That's it.
+
+--- Optional Configuration
+
+Adjust `DB_NAME` at the top of `index.php` if the SQLite database file has a different name or path.
+
+You can also customize the names of some of the wiki pages: the home page, the help page, and the special page listing the wiki's recent changes.
+
+--- Server Configuration
+
+ReadWriteWiki is designed to be deployed by simply copying `index.php` onto the server. No additional setup is required as long as the server supports PHP.
+
+If needed, configure Nginx to recognize PHP files. For example:
+
+ server {
+ 	# ...
+ 
+ 	index index.php index.html;
+ 
+ 	location ~ \.php$ {
+ 		include fastcgi_params;
+ 		fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+ 		fastcgi_pass unix:/run/php/php7.4-fpm.sock;
+ 	}
+ }
