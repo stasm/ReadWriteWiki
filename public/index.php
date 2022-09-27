@@ -7,8 +7,8 @@ const RECENT_CHANGES = 'RecentChanges';
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
 
-const RE_PAGE_SLUG = '/\b(\p{Lu}\p{Ll}+(\p{Lu}\p{Ll}+|\d+)+)\b/u';
-const RE_PAGE_LINK = '/\b(\p{Lu}\p{Ll}+(\p{Lu}\p{Ll}+|\d+)+)(\[(.+?)\]|=([a-z]+)\b)?/u';
+const RE_PAGE_SLUG = '/\b(?<slug>\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+)\b/u';
+const RE_PAGE_LINK = '/(?:\[(?<title>.+?)\])?\b(?<slug>\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+)(?:=(?<action>[a-z]+)\b)?/u';
 const RE_WORD_BOUNDARY = '/((?<=\p{Ll}|\d)(?=\p{Lu})|(?<=\p{Ll})(?=\d))/u';
 
 class State
@@ -231,8 +231,9 @@ class Revision
 		return preg_replace_callback(
 				RE_PAGE_LINK,
 				function($matches) use(&$state, $trail) {
-					$slug = $matches[1];
+					$slug = $matches["slug"];
 					$missing = $state->PageExists($slug) ? '' : 'data-missing';
+
 					$index = array_search($slug, $trail);
 					if ($index !== false) {
 						// The page is already in the navigation trail.
@@ -241,11 +242,17 @@ class Revision
 					}
 					$trail[] = $slug;
 					$breadcrumbs = implode('&', $trail);
-					if ($action = $matches[5]) {
-						return "<a $missing href=\"?$breadcrumbs=$action\">$slug=$action</a>";
+
+					if ($action = $matches["action"]) {
+						$breadcrumbs .= "=$action";
+						$slug .= "=$action";
 					}
-					$text = $matches[4] ?? $slug;
-					return "<a $missing href=\"?$breadcrumbs\">$text</a>";
+
+					if ($title = $matches["title"]) {
+						$slug = $title;
+					}
+
+					return "<a $missing href=\"?$breadcrumbs\">$slug</a>";
 				},
 				$text,
 				-1, $count, PREG_UNMATCHED_AS_NULL);
