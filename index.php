@@ -188,8 +188,13 @@ class Revision
 
 			$line = trim($line);
 
-			if (preg_match('#^https?://.*\.(jpg|jpeg|png|gif|webp)$#', $line)) {
+			if (preg_match('#^https?://.+\.(jpg|jpeg|png|gif|webp)$#', $line)) {
 				yield "<figure><img src=\"$line\"/></figure>";
+				continue;
+			}
+
+			if (preg_match('#^https?://[^ ]+$#', $line)) {
+				yield "<figure><a href=\"$line\">$line</a></figure>";
 				continue;
 			}
 
@@ -547,6 +552,14 @@ function wrap_html($buffer)
 				padding: 15px;
 			}
 
+			article a {
+				text-decoration: none;
+			}
+
+			article a[data-missing] {
+				color: firebrick;
+			}
+
 			article h2 {
 				font-size: 1.2rem;
 			}
@@ -564,7 +577,11 @@ function wrap_html($buffer)
 				margin: 0;
 			}
 
-			article img {
+			article figure a {
+				text-decoration: underline;
+			}
+
+			article figure img {
 				display: block;
 				width: 100%;
 				object-fit: cover;
@@ -578,14 +595,6 @@ function wrap_html($buffer)
 
 			article code {
 				background: whitesmoke;
-			}
-
-			article a {
-				text-decoration: none;
-			}
-
-			article a[data-missing] {
-				color: firebrick;
 			}
 
 			.meta {
