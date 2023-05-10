@@ -549,6 +549,7 @@ function wrap_html($buffer)
 				max-width: 500px;
 				max-height: calc(100vh - 16px);
 				overflow-y: auto;
+				overflow-wrap: break-word;
 				padding: 15px;
 			}
 
@@ -573,12 +574,17 @@ function wrap_html($buffer)
 				font-style: italic;
 			}
 
-			article figure {
+			article figure:has(> img) {
 				margin: 0;
+			}
+
+			article figure:has(> a) {
+				margin: 1rem;
 			}
 
 			article figure a {
 				text-decoration: underline;
+				word-break: break-all;
 			}
 
 			article figure img {
