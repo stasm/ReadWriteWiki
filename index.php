@@ -189,11 +189,27 @@ class Revision
 			$line = trim($line);
 
 			if (preg_match('#^https?://.+\.(jpg|jpeg|png|gif|webp)$#', $line)) {
+				if ($inside_pre) {
+					$inside_pre = false;
+					yield '</pre>';
+				}
+				if ($inside_list) {
+					$inside_list = false;
+					yield '</ul>';
+				}
 				yield "<figure><img src=\"$line\"/></figure>";
 				continue;
 			}
 
 			if (preg_match('#^https?://[^ ]+$#', $line)) {
+				if ($inside_pre) {
+					$inside_pre = false;
+					yield '</pre>';
+				}
+				if ($inside_list) {
+					$inside_list = false;
+					yield '</ul>';
+				}
 				yield "<figure><a href=\"$line\">$line</a></figure>";
 				continue;
 			}
