@@ -416,6 +416,35 @@ function view_recent_changes($state, $p = 0)
 	render_recent_changes($p, $changes);
 }
 
+function view_recent_changes_from($state, $remote_ip, $p = 0)
+{
+	if ($p > 0) {
+		render_not_valid(RECENT_CHANGES, null, $p);
+		return;
+	}
+
+	$limit = 25;
+	$statement = $state->pdo->prepare('
+		WITH recent_changes AS (
+			SELECT
+				id, slug, time_created, remote_addr, size,
+				LEAD(id, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_id,
+				LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size
+			FROM changelog
+		)
+		SELECT *
+		FROM recent_changes
+		WHERE remote_addr = ?
+		ORDER BY id DESC
+		LIMIT ? OFFSET ?
+	;');
+
+	$statement->execute(array(inet_pton($remote_ip), $limit, $limit * $p * -1));
+	$statement->setFetchMode(PDO::FETCH_CLASS, 'Change');
+	$changes = $statement->fetchAll();
+	render_recent_changes_from($remote_ip, $p, $changes);
+}
+
 session_start();
 $state = new State();
 
@@ -463,7 +492,14 @@ case 'GET':
 
 		switch ($slug) {
 		case RECENT_CHANGES:
-			view_recent_changes($state, $id);
+			$remote_ip = $action;
+			if ($remote_ip == null) {
+				view_recent_changes($state, $id);
+			} elseif (filter_var($remote_ip, FILTER_VALIDATE_IP)) {
+				view_recent_changes_from($state, $remote_ip, $id);
+			} else {
+				render_not_valid($slug, null, null, $remote_ip);
+			}
 			return;
 		}
 
@@ -643,7 +679,7 @@ $buffer
 EOF;
 }
 
-function render_not_valid($slug, $id = null, $p = null)
+function render_not_valid($slug, $id = null, $p = null, $ip = null)
 { ?>
 	<article class="meta" style="background:mistyrose">
 	<?php if ($id !== null): ?>
@@ -652,6 +688,9 @@ function render_not_valid($slug, $id = null, $p = null)
 	<?php elseif ($p !== null): ?>
 		<h1>Invalid Range</h1>
 		<p><?=htmlspecialchars($slug)?>[<?=htmlspecialchars($p)?>] is not a valid range offset.</p>
+	<?php elseif ($ip !== null): ?>
+		<h1>Invalid Address</h1>
+		<p><?=htmlspecialchars($ip)?> is not a valid IP address.</p>
 	<?php else: ?>
 		<h1>Invalid Page Name </h1>
 		<p><?=htmlspecialchars($slug)?> is not a valid page name.</p>
@@ -805,10 +844,10 @@ function render_history($slug, $changes)
 				<a href="?<?=$slug?>[<?=$change->id?>]">
 					[<?=$change->id?>]
 				</a>
+				(<a href="?<?=$slug?>[<?=$change->prev_id?>]&<?=$slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
 				on <?=$change->date_created->format(AS_DATE)?>
 				at <?=$change->date_created->format(AS_TIME)?>
-				from <?=$change->remote_ip?>
-				(<a href="?<?=$slug?>[<?=$change->prev_id?>]&<?=$slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
+				from <a href="?<?=RECENT_CHANGES?>=<?=$change->remote_ip?>"><?=$change->remote_ip?></a>
 			</li>
 		<?php endforeach ?>
 		</ul>
@@ -869,16 +908,50 @@ function render_recent_changes($p, $changes)
 				<a href="?<?=$change->slug?>[<?=$change->id?>]">
 					<?=$change->slug?>[<?=$change->id?>]
 				</a>
+				(<a href="?<?=$change->slug?>[<?=$change->prev_id?>]&<?=$change->slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
 				on <?=$change->date_created->format(AS_DATE)?>
 				at <?=$change->date_created->format(AS_TIME)?>
-				from <?=$change->remote_ip?>
-				(<a href="?<?=$change->slug?>[<?=$change->prev_id?>]&<?=$change->slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
+				from <a href="?<?=RECENT_CHANGES?>=<?=$change->remote_ip?>"><?=$change->remote_ip?></a>
 			</li>
 		<?php endforeach ?>
 		</ul>
 
 		<p>
 			<a href="?<?=RECENT_CHANGES?>[<?=$next?>]">next</a>
+		</p>
+
+		<footer class="meta">
+			<a href="?">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
+		</footer>
+	</article>
+<?php }
+
+function render_recent_changes_from($remote_ip, $p, $changes)
+{
+	$next = $p - 1;
+?>
+	<article style="background:aliceblue">
+		<h1 class="meta">
+			Recent Changes from <?=htmlspecialchars($remote_ip)?>
+		</h1>
+
+		<ul>
+		<?php foreach ($changes as $change): ?>
+			<li>
+				<a href="?<?=$change->slug?>[<?=$change->id?>]">
+					<?=$change->slug?>[<?=$change->id?>]
+				</a>
+				(<a href="?<?=$change->slug?>[<?=$change->prev_id?>]&<?=$change->slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
+				on <?=$change->date_created->format(AS_DATE)?>
+				at <?=$change->date_created->format(AS_TIME)?>
+			</li>
+		<?php endforeach ?>
+		</ul>
+
+		<p>
+			<a href="?<?=RECENT_CHANGES?>[<?=$next?>]=<?=$remote_ip?>">next</a>
 		</p>
 
 		<footer class="meta">
