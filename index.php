@@ -126,7 +126,7 @@ class Revision
 
 				$heading = ltrim($line, '- ');
 				if ($heading) {
-					$heading = htmlentities($heading);
+					$heading = htmlspecialchars($heading);
 					$heading = $this->Linkify($heading);
 					yield '<h2>' . $heading . '</h2>';
 				}
@@ -145,7 +145,7 @@ class Revision
 				}
 
 				$line = substr($line, 1);
-				$line = htmlentities($line);
+				$line = htmlspecialchars($line);
 				$line = $this->Inline($line);
 				$line = $this->Linkify($line);
 				yield '<li>' . $line . '</li>';
@@ -163,7 +163,7 @@ class Revision
 				}
 
 				$line = substr($line, 1);
-				$line = htmlentities($line);
+				$line = htmlspecialchars($line);
 				yield $line;
 				continue;
 			}
@@ -179,7 +179,7 @@ class Revision
 				}
 
 				$line = substr($line, 1);
-				$line = htmlentities($line);
+				$line = htmlspecialchars($line);
 				$line = $this->Inline($line);
 				$line = $this->Linkify($line);
 				yield '<blockquote>' . $line . '</blockquote>';
@@ -224,7 +224,7 @@ class Revision
 					yield '</pre>';
 				}
 
-				$line = htmlentities($line);
+				$line = htmlspecialchars($line);
 				$line = $this->Inline($line);
 				$line = $this->Linkify($line);
 				yield '<p>' . $line . '</p>';
@@ -540,7 +540,7 @@ function wrap_html($buffer)
 		}
 	}
 
-	$title = htmlentities(implode(' & ', $panels));
+	$title = htmlspecialchars(implode(' & ', $panels));
 	return <<<EOF
 <!doctype html>
 <html>
@@ -648,13 +648,13 @@ function render_not_valid($slug, $id = null, $p = null)
 	<article class="meta" style="background:mistyrose">
 	<?php if ($id !== null): ?>
 		<h1>Invalid Revision</h1>
-		<p><?=htmlentities($slug)?>[<?=htmlentities($id)?>] is not a valid revision.</p>
+		<p><?=htmlspecialchars($slug)?>[<?=htmlspecialchars($id)?>] is not a valid revision.</p>
 	<?php elseif ($p !== null): ?>
 		<h1>Invalid Range</h1>
-		<p><?=htmlentities($slug)?>[<?=htmlentities($p)?>] is not a valid range offset.</p>
+		<p><?=htmlspecialchars($slug)?>[<?=htmlspecialchars($p)?>] is not a valid range offset.</p>
 	<?php else: ?>
 		<h1>Invalid Page Name </h1>
-		<p><?=htmlentities($slug)?> is not a valid page name.</p>
+		<p><?=htmlspecialchars($slug)?> is not a valid page name.</p>
 	<?php endif ?>
 		<footer class="meta">
 			<a href="?">home</a>
