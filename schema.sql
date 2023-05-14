@@ -1,20 +1,36 @@
 BEGIN TRANSACTION;
+
 CREATE TABLE IF NOT EXISTS "revisions" (
-	"id"	INTEGER NOT NULL UNIQUE,
+	"id"	INTEGER PRIMARY KEY,
 	"slug"	INTEGER NOT NULL,
-	"body"	TEXT,
 	"time_created"	INTEGER NOT NULL,
 	"remote_addr"	BLOB NOT NULL,
-	PRIMARY KEY("id" AUTOINCREMENT)
+	"body"	TEXT,
+	"image_hash"	TEXT,
 );
+
 CREATE INDEX IF NOT EXISTS "slugs" ON "revisions" (
 	"slug"
 );
+
+CREATE TABLE IF NOT EXISTS "images" (
+	"hash"	text PRIMARY KEY,
+	"time_created"	integer NOT NULL,
+	"remote_addr"	blob NOT NULL,
+	"content_type"	text NOT NULL,
+	"image_data"	blob NOT NULL,
+	"file_size"	INTEGER NOT NULL,
+	"file_name"	TEXT NOT NULL,
+	"page_slug"	TEXT NOT NULL
+);
+
 CREATE VIEW changelog AS
-SELECT id, slug, body, LENGTH(body) AS size, time_created, remote_addr
+SELECT id, slug, body, LENGTH(body) AS size, time_created, remote_addr, image_hash
 FROM revisions;
+
 CREATE VIEW latest AS
-SELECT MAX(id) AS id, slug, body, time_created, remote_addr
+SELECT MAX(id) AS id, slug, body, time_created, remote_addr, image_hash
 FROM revisions
 GROUP BY slug;
+
 COMMIT;

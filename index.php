@@ -7,8 +7,10 @@ const RECENT_CHANGES = 'RecentChanges';
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
 
+const RE_HASH_SHA1 = '/^[[:xdigit:]]{40}$/';
 const RE_PAGE_SLUG = '/\b(?<slug>\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+)\b/u';
 const RE_PAGE_LINK = '/(?:\[(?<title>.+?)\])?\b(?<slug>\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+)(?:=(?<action>[a-z]+)\b)?/u';
+const RE_IMAGE_EMBED = '/^\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+=image$/u';
 const RE_WORD_BOUNDARY = '/((?<=\p{Ll}|\d)(?=\p{Lu})|(?<=\p{Ll})(?=\d))/u';
 
 class State
@@ -36,6 +38,9 @@ class State
 			return $buffer;
 		case 'html':
 			return wrap_html($buffer);
+		default:
+			header("Content-Type: $this->content_type");
+			return $buffer;
 		}
 	}
 
@@ -83,6 +88,7 @@ class Revision
 	public $title;
 	public $body;
 	public $date_created;
+	public $image_hash;
 
 	private $state;
 	private $time_created;
@@ -188,6 +194,19 @@ class Revision
 
 			$line = trim($line);
 
+			if (preg_match(RE_IMAGE_EMBED, $line)) {
+				if ($inside_pre) {
+					$inside_pre = false;
+					yield '</pre>';
+				}
+				if ($inside_list) {
+					$inside_list = false;
+					yield '</ul>';
+				}
+				yield "<figure><img src=\"?$line\"/></figure>";
+				continue;
+			}
+
 			if (preg_match('#^https?://.+\.(jpg|jpeg|png|gif|webp)$#', $line)) {
 				if ($inside_pre) {
 					$inside_pre = false;
@@ -267,6 +286,10 @@ class Revision
 					if ($action = $matches["action"]) {
 						$breadcrumbs .= "=$action";
 						$slug .= "=$action";
+
+						if ($action == 'image') {
+							return "<img src=\"?$slug\">";
+						}
 					}
 
 					if ($title = $matches["title"]) {
@@ -295,11 +318,11 @@ function starts_with($string, $prefix) {
 function view_revision($state, $slug, $id, $mode)
 {
 	$statement = $state->pdo->prepare($id ? '
-		SELECT id, slug, body, time_created
+		SELECT id, slug, body, time_created, image_hash
 		FROM revisions
 		WHERE slug = ? AND id = ?
 	;' : '
-		SELECT id, slug, body, time_created
+		SELECT id, slug, body, time_created, image_hash
 		FROM latest
 		WHERE slug = ?
 	;');
@@ -309,7 +332,11 @@ function view_revision($state, $slug, $id, $mode)
 	$page = $statement->fetch();
 
 	if (!$page) {
-		render_not_found($slug, $id);
+		if ($id) {
+			render_revision_not_found($slug, $id);
+		} else {
+			render_page_not_found($slug);
+		}
 		return;
 	}
 
@@ -324,14 +351,44 @@ function view_revision($state, $slug, $id, $mode)
 	}
 }
 
+function view_image($state, $slug, $id)
+{
+	if (!$state->PageExists($slug)) {
+		render_page_not_found($slug, $id);
+		return;
+	}
+
+	$statement = $state->pdo->prepare($id ? '
+		SELECT content_type, image_data
+		FROM images JOIN revisions ON images.hash == revisions.image_hash
+		WHERE revisions.slug = ? AND revisions.id = ?
+	;' : '
+		SELECT content_type, image_data
+		FROM images JOIN latest ON images.hash == latest.image_hash
+		WHERE latest.slug = ?
+	;');
+
+	$statement->execute($id ? array($slug, $id) : array($slug));
+	$statement->bindColumn('content_type', $content_type, PDO::PARAM_STR);
+	$statement->bindColumn('image_data', $image_data, PDO::PARAM_LOB);
+	if (!$statement->fetch(PDO::FETCH_BOUND)) {
+		render_image_not_found($slug, $id);
+		return;
+	}
+
+	$state->content_type = $content_type;
+	// Stream the image.
+	fpassthru($image_data);
+}
+
 function view_edit($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare($id ? '
-		SELECT id, slug, body, time_created
+		SELECT id, slug, body, time_created, image_hash
 		FROM revisions
 		WHERE slug = ? AND id = ?
 	;' : '
-		SELECT slug, body, time_created
+		SELECT id, slug, body, time_created, image_hash
 		FROM latest
 		WHERE slug = ?
 	;');
@@ -342,7 +399,7 @@ function view_edit($state, $slug, $id)
 
 	if (!$page) {
 		if ($id !== null) {
-			render_not_found($slug, $id);
+			render_revision_not_found($slug, $id);
 			return;
 		}
 
@@ -369,7 +426,7 @@ function view_history($state, $slug, $id)
 	$changes = $statement->fetchAll();
 
 	if (!$changes) {
-		render_not_found($slug);
+		render_page_not_found($slug);
 	} else {
 		render_history($slug, $changes);
 	}
@@ -518,6 +575,9 @@ case 'GET':
 			$state->content_type = $action;
 			view_revision($state, $slug, $id, $action);
 			break;
+		case 'image':
+			view_image($state, $slug, $id);
+			break;
 		default:
 			view_revision($state, $slug, $id, 'html');
 		}
@@ -536,28 +596,83 @@ case 'POST':
 	$time = date('U');
 	$addr = inet_pton($_SERVER['REMOTE_ADDR']);
 	$slug = filter_input(INPUT_POST, 'slug');
+	$image_hash = filter_input(INPUT_POST, 'image_hash');
+
 	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_SLUG]])) {
 		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
-		exit();
+		exit('Invalid page slug; must be CamelCase123.');
+	}
+
+	$state->pdo->beginTransaction();
+
+	$image = $_FILES['image_data'];
+	if (file_exists($image['tmp_name']) && is_uploaded_file($image['tmp_name'])) {
+		$content_type = mime_content_type($image['tmp_name']);
+
+		if (!starts_with($content_type, 'image/')) {
+			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+			exit('File is not an image; MIME type must be image/*.');
+		}
+
+		if ($image['error'] > UPLOAD_ERR_OK) {
+			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+			exit('File too big; must be less than 100KB.');
+		}
+
+		if ($image['size'] > 100000) {
+			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+			exit('File too big; must be less than 100KB.');
+		}
+
+		$statement = $state->pdo->prepare('
+			INSERT INTO images (hash, page_slug, content_type, time_created, remote_addr, image_data, file_size, file_name)
+			VALUES (:hash, :page_slug, :content_type, :time_created, :remote_addr, :image_data, :file_size, :file_name)
+			RETURNING hash;
+		;');
+
+		$hash = sha1_file($image['tmp_name']);
+		$file = fopen($image['tmp_name'], 'rb');
+
+		$statement->bindParam('hash', $hash, PDO::PARAM_STR);
+		$statement->bindParam('page_slug', $slug, PDO::PARAM_STR);
+		$statement->bindParam('content_type', $content_type, PDO::PARAM_STR);
+		$statement->bindParam('time_created', $time, PDO::PARAM_INT);
+		$statement->bindParam('remote_addr', $addr, PDO::PARAM_STR);
+		$statement->bindParam('image_data', $file, PDO::PARAM_LOB);
+		$statement->bindParam('file_size', $image['size'], PDO::PARAM_INT);
+		$statement->bindParam('file_name', $image['name'], PDO::PARAM_STR);
+
+		if (!$statement->execute()) {
+			exit('Unable to upload the image.');
+		}
+
+		$image_hash = $statement->fetchColumn();
+	} elseif (empty($image_hash)) {
+		$image_hash = null;
+	} elseif (!filter_var($image_hash, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_HASH_SHA1]])) {
+		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+		exit('Invalid image_hash; must be SHA1 or empty.');
 	}
 
 	$statement = $state->pdo->prepare('
-		INSERT INTO revisions (slug, body, time_created, remote_addr)
-		VALUES (:slug, :body, :time, :addr)
+		INSERT INTO revisions (slug, body, time_created, remote_addr, image_hash)
+		VALUES (:slug, :body, :time, :addr, :image_hash)
 	;');
 
 	$statement->bindParam('slug', $slug, PDO::PARAM_STR);
 	$statement->bindParam('body', $body, PDO::PARAM_STR);
 	$statement->bindParam('time', $time, PDO::PARAM_INT);
 	$statement->bindParam('addr', $addr, PDO::PARAM_STR);
+	$statement->bindParam('image_hash', $image_hash, PDO::PARAM_STR);
 
 	if ($statement->execute()) {
+		$state->pdo->commit();
 		$_SESSION['revision_created'] = true;
 		header("Location: ?$slug", true, 303);
 		exit;
 	}
 
-	die("Unable to create a new revision of $slug.");
+	exit("Unable to create a new revision of $slug.");
 }
 
 // Rendering templates
@@ -617,6 +732,10 @@ function wrap_html($buffer)
 				font-size: 1.2rem;
 			}
 
+			article p img {
+				max-width: 100px;
+			}
+
 			article ul {
 				padding-left: 1rem;
 			}
@@ -641,7 +760,7 @@ function wrap_html($buffer)
 
 			article figure img {
 				display: block;
-				width: 100%;
+				max-width: 100%;
 				object-fit: cover;
 			}
 
@@ -661,6 +780,7 @@ function wrap_html($buffer)
 
 			footer {
 				font-size: 80%;
+				margin-top: 1em;
 			}
 
 			textarea {
@@ -703,19 +823,55 @@ function render_not_valid($slug, $id = null, $p = null, $ip = null)
 	</article>
 <?php }
 
-function render_not_found($slug, $id = null)
+function render_page_not_found($slug)
+{ ?>
+	<article class="meta" style="background:mistyrose">
+		<h1>Page Not Found</h1>
+		<p><?=$slug?> doesn't exist yet. <a href="?<?=$slug?>=edit">Create?</a></p>
+
+		<footer class="meta">
+			<a href="?<?=$slug?>=backlinks">backlinks</a>
+			<br>
+			<a href="?">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
+		</footer>
+	</article>
+<?php }
+
+function render_revision_not_found($slug, $id)
+{ ?>
+	<article class="meta" style="background:mistyrose">
+		<h1>Revision Not Found</h1>
+		<p><?=$slug?>[<?=$id?>] doesn't exist.</p>
+
+		<footer class="meta">
+			<a href="?<?=$slug?>=backlinks">backlinks</a>
+			<a href="?<?=$slug?>=history">history</a>
+			<br>
+			<a href="?">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
+		</footer>
+	</article>
+<?php }
+
+function render_image_not_found($slug, $id = null)
 { ?>
 	<article class="meta" style="background:mistyrose">
 	<?php if ($id): ?>
-		<h1>Revision Not Found</h1>
-		<p><?=$slug?>[<?=$id?>] doesn't exist.</p>
+		<h1>Image Not Found</h1>
+		<p><?=$slug?>[<?=$id?>] doesn't have an image.</p>
 	<?php else: ?>
-		<h1>Page Not Found</h1>
-		<p><?=$slug?> doesn't exist yet. <a href="?<?=$slug?>=edit">Create?</a></p>
+		<h1>Image Not Found</h1>
+		<p><?=$slug?> doesn't have an image. <a href="?<?=$slug?>=edit">Edit?</a></p>
 	<?php endif ?>
 
 		<footer class="meta">
 			<a href="?<?=$slug?>=backlinks">backlinks</a>
+		<?php if ($id): ?>
+			<a href="?<?=$slug?>=history">history</a>
+		<?php endif ?>
 			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
@@ -750,6 +906,10 @@ function render_latest($page, $state)
 			</a>
 		</h1>
 
+	<?php if ($page->image_hash): ?>
+		<figure><img src="?<?=$page->slug?>=image"></figure>
+	<?php endif ?>
+
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
@@ -760,6 +920,9 @@ function render_latest($page, $state)
 			<br>
 			<a href="?<?=$page->slug?>">html</a>
 			<a href="?<?=$page->slug?>=text">text</a>
+		<?php if ($page->image_hash): ?>
+			<a href="?<?=$page->slug?>=image">image</a>
+		<?php endif ?>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
 			<br>
@@ -779,6 +942,10 @@ function render_revision($page)
 			</a> <small>[<?=$page->id?>]</small>
 		</h1>
 
+	<?php if ($page->image_hash): ?>
+		<figure><img src="?<?=$page->slug?>[<?=$page->id?>]=image"></figure>
+	<?php endif ?>
+
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
 		<footer class="meta">
@@ -789,6 +956,9 @@ function render_revision($page)
 			<br>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]">html</a>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=text">text</a>
+		<?php if ($page->image_hash): ?>
+			<a href="?<?=$page->slug?>[<?=$page->id?>]=image">image</a>
+		<?php endif ?>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=history">history</a>
 			<a href="?<?=$page->slug?>">latest</a>
@@ -805,19 +975,20 @@ function render_edit($page)
 { ?>
 	<article style="background:cornsilk">
 		<h1 class="meta">
-		<?php if ($page->id): ?>
-			Restore <a href="?<?=$page->slug?>">
-				<?=$page->title?>
-			</a> <small>[<?=$page->id?>]</small>
-		<?php else: ?>
 			Edit <a href="?<?=$page->slug?>">
 				<?=$page->title?>
-			</a>
-		<?php endif ?>
+			</a> <small>[<?=$page->id?>]</small>
 		</h1>
 
-		<form method="post" action="?">
+		<form method="post" action="?" enctype="multipart/form-data">
 			<input type="hidden" name="slug" value="<?=$page->slug?>">
+			<input type="hidden" name="image_hash" value="<?=$page->image_hash?>">
+
+		<?php if ($page->image_hash): ?>
+			<figure><img src="?<?=$page->slug?>[<?=$page->id?>]=image"></figure>
+		<?php endif ?>
+			<input type="file" name="image_data" accept="image/*" onchange="let size_kb = this.files[0].size / 1024; this.nextElementSibling.textContent = new Intl.NumberFormat('en', {style: 'unit', unit: 'kilobyte', maximumFractionDigits: 1}).format(size_kb);"><small></small>
+
 			<textarea name="body" placeholder="Type here..."><?=$page->body?></textarea>
 			<input type="text" name="user" placeholder="Leave this empty.">
 			<button type="submit">Save</button>
