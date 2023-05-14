@@ -315,28 +315,20 @@ function starts_with($string, $prefix) {
 	return substr($string, 0, strlen($prefix)) == $prefix;
 }
 
-function view_revision($state, $slug, $id, $mode)
+function view_page_latest($state, $slug, $mode)
 {
-	$statement = $state->pdo->prepare($id ? '
-		SELECT id, slug, body, time_created, image_hash
-		FROM revisions
-		WHERE slug = ? AND id = ?
-	;' : '
+	$statement = $state->pdo->prepare('
 		SELECT id, slug, body, time_created, image_hash
 		FROM latest
 		WHERE slug = ?
 	;');
 
-	$statement->execute($id ? array($slug, $id) : array($slug));
+	$statement->execute(array($slug));
 	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
 	$page = $statement->fetch();
 
 	if (!$page) {
-		if ($id) {
-			render_revision_not_found($slug, $id);
-		} else {
-			render_page_not_found($slug);
-		}
+		render_page_not_found($slug);
 		return;
 	}
 
@@ -344,31 +336,76 @@ function view_revision($state, $slug, $id, $mode)
 
 	if ($mode === 'text') {
 		render_source($page);
-	} elseif ($id === null) {
+	} else {
 		render_latest($page, $state);
+	}
+}
+
+function view_page_at_revision($state, $slug, $id, $mode)
+{
+	$statement = $state->pdo->prepare('
+		SELECT id, slug, body, time_created, image_hash
+		FROM revisions
+		WHERE slug = ? AND id = ?
+	;');
+
+	$statement->execute(array($slug, $id));
+	$statement->setFetchMode(PDO::FETCH_CLASS, 'Revision');
+	$page = $statement->fetch();
+
+	if (!$page) {
+		render_revision_not_found($slug, $id);
+		return;
+	}
+
+	$page->Anchor($state);
+
+	if ($mode === 'text') {
+		render_source($page);
 	} else {
 		render_revision($page);
 	}
 }
 
-function view_image($state, $slug, $id)
+function view_image_latest($state, $slug)
 {
 	if (!$state->PageExists($slug)) {
-		render_page_not_found($slug, $id);
+		render_page_not_found($slug);
 		return;
 	}
 
-	$statement = $state->pdo->prepare($id ? '
-		SELECT content_type, image_data
-		FROM images JOIN revisions ON images.hash == revisions.image_hash
-		WHERE revisions.slug = ? AND revisions.id = ?
-	;' : '
+	$statement = $state->pdo->prepare('
 		SELECT content_type, image_data
 		FROM images JOIN latest ON images.hash == latest.image_hash
 		WHERE latest.slug = ?
 	;');
 
-	$statement->execute($id ? array($slug, $id) : array($slug));
+	$statement->execute(array($slug));
+	$statement->bindColumn('content_type', $content_type, PDO::PARAM_STR);
+	$statement->bindColumn('image_data', $image_data, PDO::PARAM_LOB);
+	if (!$statement->fetch(PDO::FETCH_BOUND)) {
+		render_image_not_found($slug);
+		return;
+	}
+
+	$state->content_type = $content_type;
+	fpassthru($image_data);
+}
+
+function view_image_at_revision($state, $slug, $id)
+{
+	if (!$state->PageExists($slug)) {
+		render_revision_not_found($slug, $id);
+		return;
+	}
+
+	$statement = $state->pdo->prepare('
+		SELECT content_type, image_data
+		FROM images JOIN revisions ON images.hash == revisions.image_hash
+		WHERE revisions.slug = ? AND revisions.id = ?
+	;');
+
+	$statement->execute(array($slug, $id));
 	$statement->bindColumn('content_type', $content_type, PDO::PARAM_STR);
 	$statement->bindColumn('image_data', $image_data, PDO::PARAM_LOB);
 	if (!$statement->fetch(PDO::FETCH_BOUND)) {
@@ -377,7 +414,6 @@ function view_image($state, $slug, $id)
 	}
 
 	$state->content_type = $content_type;
-	// Stream the image.
 	fpassthru($image_data);
 }
 
@@ -560,6 +596,10 @@ case 'GET':
 			return;
 		}
 
+		if (empty($action)) {
+			$action = 'html';
+		}
+
 		switch ($action) {
 		case 'edit':
 			view_edit($state, $slug, $id);
@@ -573,13 +613,19 @@ case 'GET':
 		case 'html':
 		case 'text':
 			$state->content_type = $action;
-			view_revision($state, $slug, $id, $action);
+			if ($id) {
+				view_page_at_revision($state, $slug, $id, $action);
+			} else {
+				view_page_latest($state, $slug, $action);
+			}
 			break;
 		case 'image':
-			view_image($state, $slug, $id);
+			if ($id) {
+				view_image_at_revision($state, $slug, $id);
+			} else {
+				view_image_latest($state, $slug);
+			}
 			break;
-		default:
-			view_revision($state, $slug, $id, 'html');
 		}
 	}
 
@@ -848,6 +894,7 @@ function render_revision_not_found($slug, $id)
 		<footer class="meta">
 			<a href="?<?=$slug?>=backlinks">backlinks</a>
 			<a href="?<?=$slug?>=history">history</a>
+			<a href="?<?=$slug?>">latest</a>
 			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
@@ -871,6 +918,7 @@ function render_image_not_found($slug, $id = null)
 			<a href="?<?=$slug?>=backlinks">backlinks</a>
 		<?php if ($id): ?>
 			<a href="?<?=$slug?>=history">history</a>
+			<a href="?<?=$slug?>">latest</a>
 		<?php endif ?>
 			<br>
 			<a href="?">home</a>
@@ -914,8 +962,7 @@ function render_latest($page, $state)
 
 		<footer class="meta">
 			last modified on <span title="<?=$page->date_created->format(AS_TIME)?>">
-				<?=$page->date_created->format(AS_DATE)?>
-			</span>
+				<?=$page->date_created->format(AS_DATE)?></span>
 			<a href="?<?=$page->slug?>=edit">edit</a>
 			<br>
 			<a href="?<?=$page->slug?>">html</a>
@@ -950,8 +997,7 @@ function render_revision($page)
 
 		<footer class="meta">
 			revision <?=$page->id?> from <span title="<?=$page->date_created->format(AS_TIME)?>">
-				<?=$page->date_created->format(AS_DATE)?>
-			</span>
+				<?=$page->date_created->format(AS_DATE)?></span>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=edit">restore</a>
 			<br>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]">html</a>
@@ -995,6 +1041,11 @@ function render_edit($page)
 		</form>
 
 		<footer class="meta">
+			<a href="?<?=$page->slug?>">html</a>
+			<a href="?<?=$page->slug?>=text">text</a>
+			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
+			<a href="?<?=$page->slug?>=history">history</a>
+			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
