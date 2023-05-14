@@ -651,21 +651,51 @@ case 'POST':
 
 	$state->pdo->beginTransaction();
 
-	$image = $_FILES['image_data'];
-	if (file_exists($image['tmp_name']) && is_uploaded_file($image['tmp_name'])) {
-		$content_type = mime_content_type($image['tmp_name']);
-
-		if (!starts_with($content_type, 'image/')) {
-			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
-			exit('File is not an image; MIME type must be image/*.');
-		}
-
-		if ($image['error'] > UPLOAD_ERR_OK) {
+	$image_file = $_FILES['image_data'];
+	if (file_exists($image_file['tmp_name']) && is_uploaded_file($image_file['tmp_name'])) {
+		if ($image_file['error'] > UPLOAD_ERR_OK) {
 			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
 			exit('File too big; must be less than 100KB.');
 		}
 
-		if ($image['size'] > 100000) {
+		$image_file_type = mime_content_type($image_file['tmp_name']);
+		if (extension_loaded('gd')) {
+			switch ($image_file_type) {
+			case 'image/jpeg':
+				$image = imagecreatefromjpeg($image_file['tmp_name']);
+				break;
+			case 'image/png':
+				$image = imagecreatefrompng($image_file['tmp_name']);
+				imagepalettetotruecolor($image);
+				imagealphablending($image, true);
+				imagesavealpha($image, true);
+				break;
+			case 'image/webp':
+				$image = imagecreatefromwebp($image_file['tmp_name']);
+				break;
+			default:
+				header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+				exit('Only JPG, PNG, WEBP are accepted.');
+			}
+
+			if (imagesx($image) > 470) {
+				$image = imagescale($image, 470);
+			}
+
+			$image_temp_name = $image_file['tmp_name'] . '.webp';
+			imagewebp($image, $image_temp_name, 84);
+			$image_file_type = 'image/webp';
+			$image_file_size = filesize($image_temp_name);
+		} elseif (starts_with($image_file_type, 'image/')) {
+			$image_temp_name = $image_file['tmp_name'];
+			$image_file_size = $image_file['size'];
+		} else {
+			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+			exit('File is not an image; MIME type must be image/*.');
+		}
+
+
+		if ($image_file_size > 100000) {
 			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
 			exit('File too big; must be less than 100KB.');
 		}
@@ -676,17 +706,17 @@ case 'POST':
 			RETURNING hash;
 		;');
 
-		$hash = sha1_file($image['tmp_name']);
-		$file = fopen($image['tmp_name'], 'rb');
+		$hash = sha1_file($image_temp_name);
+		$file = fopen($image_temp_name, 'rb');
 
 		$statement->bindParam('hash', $hash, PDO::PARAM_STR);
 		$statement->bindParam('page_slug', $slug, PDO::PARAM_STR);
-		$statement->bindParam('content_type', $content_type, PDO::PARAM_STR);
+		$statement->bindParam('content_type', $image_file_type, PDO::PARAM_STR);
 		$statement->bindParam('time_created', $time, PDO::PARAM_INT);
 		$statement->bindParam('remote_addr', $addr, PDO::PARAM_STR);
 		$statement->bindParam('image_data', $file, PDO::PARAM_LOB);
-		$statement->bindParam('file_size', $image['size'], PDO::PARAM_INT);
-		$statement->bindParam('file_name', $image['name'], PDO::PARAM_STR);
+		$statement->bindParam('file_size', $image_file_size, PDO::PARAM_INT);
+		$statement->bindParam('file_name', $image_file['name'], PDO::PARAM_STR);
 
 		if (!$statement->execute()) {
 			exit('Unable to upload the image.');
