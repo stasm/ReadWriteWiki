@@ -371,11 +371,6 @@ function view_page_at_revision($state, $slug, $id, $mode)
 
 function view_image_latest($state, $slug)
 {
-	if (!$state->PageExists($slug)) {
-		render_page_not_found($slug);
-		return;
-	}
-
 	$statement = $state->pdo->prepare('
 		SELECT hash, content_type, image_data, file_size
 		FROM images JOIN latest ON images.hash == latest.image_hash
@@ -387,32 +382,31 @@ function view_image_latest($state, $slug)
 	$statement->bindColumn('content_type', $content_type, PDO::PARAM_STR);
 	$statement->bindColumn('image_data', $image_data, PDO::PARAM_LOB);
 	$statement->bindColumn('file_size', $file_size, PDO::PARAM_INT);
-	if (!$statement->fetch(PDO::FETCH_BOUND)) {
+
+	if ($statement->fetch(PDO::FETCH_BOUND)) {
+		header("Content-Type: $content_type");
+		header("Content-Length: $file_size");
+		header("ETag: $image_hash");
+		header('Cache-Control: max-age=' . CACHE_MAX_AGE);
+
+		if ($_SERVER['HTTP_IF_NONE_MATCH'] == $image_hash) {
+			header($_SERVER['SERVER_PROTOCOL'] . ' 304 Not Modified');
+			ob_end_flush();
+		} else {
+			ob_end_flush();
+			fpassthru($image_data);
+		}
+	} elseif ($state->PageExists($slug)) {
 		render_image_not_found($slug);
-		return;
-	}
-
-	header("Content-Type: $content_type");
-	header("Content-Length: $file_size");
-	header("ETag: $image_hash");
-	header('Cache-Control: max-age=' . CACHE_MAX_AGE);
-
-	if ($_SERVER['HTTP_IF_NONE_MATCH'] == $image_hash) {
-		header($_SERVER['SERVER_PROTOCOL'] . ' 304 Not Modified');
-		ob_end_flush();
 	} else {
-		ob_end_flush();
-		fpassthru($image_data);
+		render_page_not_found($slug);
 	}
+
+
 }
 
 function view_image_at_revision($state, $slug, $id)
 {
-	if (!$state->PageExists($slug)) {
-		render_revision_not_found($slug, $id);
-		return;
-	}
-
 	$statement = $state->pdo->prepare('
 		SELECT hash, content_type, image_data, file_size
 		FROM images JOIN revisions ON images.hash == revisions.image_hash
@@ -424,22 +418,24 @@ function view_image_at_revision($state, $slug, $id)
 	$statement->bindColumn('content_type', $content_type, PDO::PARAM_STR);
 	$statement->bindColumn('image_data', $image_data, PDO::PARAM_LOB);
 	$statement->bindColumn('file_size', $file_size, PDO::PARAM_INT);
-	if (!$statement->fetch(PDO::FETCH_BOUND)) {
+
+	if ($statement->fetch(PDO::FETCH_BOUND)) {
+		header("Content-Type: $content_type");
+		header("Content-Length: $file_size");
+		header("ETag: $image_hash");
+		header('Cache-Control: max-age=' . CACHE_MAX_AGE);
+
+		if ($_SERVER['HTTP_IF_NONE_MATCH'] == $image_hash) {
+			header($_SERVER['SERVER_PROTOCOL'] . ' 304 Not Modified');
+			ob_end_flush();
+		} else {
+			ob_end_flush();
+			fpassthru($image_data);
+		}
+	} elseif ($state->PageExists($slug)) {
 		render_image_not_found($slug, $id);
-		return;
-	}
-
-	header("Content-Type: $content_type");
-	header("Content-Length: $file_size");
-	header("ETag: $image_hash");
-	header('Cache-Control: max-age=' . CACHE_MAX_AGE);
-
-	if ($_SERVER['HTTP_IF_NONE_MATCH'] == $image_hash) {
-		header($_SERVER['SERVER_PROTOCOL'] . ' 304 Not Modified');
-		ob_end_flush();
 	} else {
-		ob_end_flush();
-		fpassthru($image_data);
+		render_revision_not_found($slug, $id);
 	}
 }
 
