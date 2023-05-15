@@ -389,7 +389,7 @@ function view_image_latest($state, $slug)
 		header("ETag: $image_hash");
 		header('Cache-Control: max-age=' . CACHE_MAX_AGE);
 
-		if ($_SERVER['HTTP_IF_NONE_MATCH'] == $image_hash) {
+		if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && $_SERVER['HTTP_IF_NONE_MATCH'] == $image_hash) {
 			header($_SERVER['SERVER_PROTOCOL'] . ' 304 Not Modified');
 			ob_end_flush();
 		} else {
@@ -425,7 +425,7 @@ function view_image_at_revision($state, $slug, $id)
 		header("ETag: $image_hash");
 		header('Cache-Control: max-age=' . CACHE_MAX_AGE);
 
-		if ($_SERVER['HTTP_IF_NONE_MATCH'] == $image_hash) {
+		if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && $_SERVER['HTTP_IF_NONE_MATCH'] == $image_hash) {
 			header($_SERVER['SERVER_PROTOCOL'] . ' 304 Not Modified');
 			ob_end_flush();
 		} else {
