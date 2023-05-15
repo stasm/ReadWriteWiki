@@ -707,15 +707,14 @@ case 'POST':
 		}
 
 		$statement = $state->pdo->prepare('
-			INSERT INTO images (hash, page_slug, content_type, time_created, remote_addr, image_data, file_size, file_name)
+			INSERT OR IGNORE INTO images (hash, page_slug, content_type, time_created, remote_addr, image_data, file_size, file_name)
 			VALUES (:hash, :page_slug, :content_type, :time_created, :remote_addr, :image_data, :file_size, :file_name)
-			RETURNING hash;
 		;');
 
-		$hash = sha1_file($image_temp_name);
+		$image_hash = sha1_file($image_temp_name);
 		$file = fopen($image_temp_name, 'rb');
 
-		$statement->bindParam('hash', $hash, PDO::PARAM_STR);
+		$statement->bindParam('hash', $image_hash, PDO::PARAM_STR);
 		$statement->bindParam('page_slug', $slug, PDO::PARAM_STR);
 		$statement->bindParam('content_type', $image_file_type, PDO::PARAM_STR);
 		$statement->bindParam('time_created', $time, PDO::PARAM_INT);
@@ -727,8 +726,6 @@ case 'POST':
 		if (!$statement->execute()) {
 			exit('Unable to upload the image.');
 		}
-
-		$image_hash = $statement->fetchColumn();
 	} elseif (empty($image_hash)) {
 		$image_hash = null;
 	} elseif (!filter_var($image_hash, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_HASH_SHA1]])) {
