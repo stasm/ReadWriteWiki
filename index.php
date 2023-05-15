@@ -4,6 +4,7 @@ defined('DB_NAME') or define('DB_NAME', 'wiki.db');
 defined('MAIN_PAGE') or define('MAIN_PAGE', 'HomePage');
 defined('HELP_PAGE') or define('HELP_PAGE', 'WikiHelp');
 defined('RECENT_CHANGES') or define('RECENT_CHANGES', 'RecentChanges');
+defined('CACHE_MAX_AGE') or define('CACHE_MAX_AGE', 60 * 10);
 
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
@@ -14,11 +15,12 @@ const RE_PAGE_LINK = '/(?:\[(?<title>.+?)\])?\b(?<slug>\p{Lu}\p{Ll}+(?:\p{Lu}\p{
 const RE_IMAGE_EMBED = '/^\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+=image$/u';
 const RE_WORD_BOUNDARY = '/((?<=\p{Ll}|\d)(?=\p{Lu})|(?<=\p{Ll})(?=\d))/u';
 
+
 class State
 {
 	public $pdo;
 	public $revision_created = false;
-	public $content_type = 'html';
+	public $content_type = null;
 	public $nav_trail = array();
 
 	public function __construct()
@@ -40,7 +42,6 @@ class State
 		case 'html':
 			return wrap_html($buffer);
 		default:
-			header("Content-Type: $this->content_type");
 			return $buffer;
 		}
 	}
@@ -376,21 +377,33 @@ function view_image_latest($state, $slug)
 	}
 
 	$statement = $state->pdo->prepare('
-		SELECT content_type, image_data
+		SELECT hash, content_type, image_data, file_size
 		FROM images JOIN latest ON images.hash == latest.image_hash
 		WHERE latest.slug = ?
 	;');
 
 	$statement->execute(array($slug));
+	$statement->bindColumn('hash', $image_hash, PDO::PARAM_STR);
 	$statement->bindColumn('content_type', $content_type, PDO::PARAM_STR);
 	$statement->bindColumn('image_data', $image_data, PDO::PARAM_LOB);
+	$statement->bindColumn('file_size', $file_size, PDO::PARAM_INT);
 	if (!$statement->fetch(PDO::FETCH_BOUND)) {
 		render_image_not_found($slug);
 		return;
 	}
 
-	$state->content_type = $content_type;
-	fpassthru($image_data);
+	header("Content-Type: $content_type");
+	header("Content-Length: $file_size");
+	header("ETag: $image_hash");
+	header('Cache-Control: max-age=' . CACHE_MAX_AGE);
+
+	if ($_SERVER['HTTP_IF_NONE_MATCH'] == $image_hash) {
+		header($_SERVER['SERVER_PROTOCOL'] . ' 304 Not Modified');
+		ob_end_flush();
+	} else {
+		ob_end_flush();
+		fpassthru($image_data);
+	}
 }
 
 function view_image_at_revision($state, $slug, $id)
@@ -401,21 +414,33 @@ function view_image_at_revision($state, $slug, $id)
 	}
 
 	$statement = $state->pdo->prepare('
-		SELECT content_type, image_data
+		SELECT hash, content_type, image_data, file_size
 		FROM images JOIN revisions ON images.hash == revisions.image_hash
 		WHERE revisions.slug = ? AND revisions.id = ?
 	;');
 
 	$statement->execute(array($slug, $id));
+	$statement->bindColumn('hash', $image_hash, PDO::PARAM_STR);
 	$statement->bindColumn('content_type', $content_type, PDO::PARAM_STR);
 	$statement->bindColumn('image_data', $image_data, PDO::PARAM_LOB);
+	$statement->bindColumn('file_size', $file_size, PDO::PARAM_INT);
 	if (!$statement->fetch(PDO::FETCH_BOUND)) {
 		render_image_not_found($slug, $id);
 		return;
 	}
 
-	$state->content_type = $content_type;
-	fpassthru($image_data);
+	header("Content-Type: $content_type");
+	header("Content-Length: $file_size");
+	header("ETag: $image_hash");
+	header('Cache-Control: max-age=' . CACHE_MAX_AGE);
+
+	if ($_SERVER['HTTP_IF_NONE_MATCH'] == $image_hash) {
+		header($_SERVER['SERVER_PROTOCOL'] . ' 304 Not Modified');
+		ob_end_flush();
+	} else {
+		ob_end_flush();
+		fpassthru($image_data);
+	}
 }
 
 function view_edit($state, $slug, $id)
@@ -539,6 +564,7 @@ function view_recent_changes_from($state, $remote_ip, $p = 0)
 	render_recent_changes_from($remote_ip, $p, $changes);
 }
 
+session_cache_limiter('none');
 session_start();
 $state = new State();
 
@@ -603,12 +629,15 @@ case 'GET':
 
 		switch ($action) {
 		case 'edit':
+			$state->content_type = 'html';
 			view_edit($state, $slug, $id);
 			break;
 		case 'history':
+			$state->content_type = 'html';
 			view_history($state, $slug, $id);
 			break;
 		case 'backlinks':
+			$state->content_type = 'html';
 			view_backlinks($state, $slug, $id);
 			break;
 		case 'html':
