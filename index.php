@@ -1,8 +1,9 @@
 <?php
-const DB_NAME = 'wiki.db';
-const MAIN_PAGE = 'HomePage';
-const HELP_PAGE = 'WikiHelp';
-const RECENT_CHANGES = 'RecentChanges';
+@include('../config.php');
+defined('DB_NAME') or define('DB_NAME', 'wiki.db');
+defined('MAIN_PAGE') or define('MAIN_PAGE', 'HomePage');
+defined('HELP_PAGE') or define('HELP_PAGE', 'WikiHelp');
+defined('RECENT_CHANGES') or define('RECENT_CHANGES', 'RecentChanges');
 
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
