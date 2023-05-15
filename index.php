@@ -683,9 +683,14 @@ case 'POST':
 				$image = imagescale($image, 470);
 			}
 
-			$image_temp_name = $image_file['tmp_name'] . '.webp';
-			imagewebp($image, $image_temp_name, 84);
-			$image_file_type = 'image/webp';
+			if ($image_file_type != 'image/webp') {
+				$image_file_type = 'image/webp';
+				$image_temp_name = $image_file['tmp_name'] . '.webp';
+				imagewebp($image, $image_temp_name, 84);
+			} else {
+				$image_temp_name = $image_file['tmp_name'];
+			}
+
 			$image_file_size = filesize($image_temp_name);
 		} elseif (starts_with($image_file_type, 'image/')) {
 			$image_temp_name = $image_file['tmp_name'];
