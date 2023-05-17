@@ -20,7 +20,7 @@ class State
 {
 	public $pdo;
 	public $revision_created = false;
-	public $content_type = null;
+	public $render_mode = 'html';
 	public $nav_trail = array();
 
 	public function __construct()
@@ -35,12 +35,12 @@ class State
 
 	public function __invoke($buffer)
 	{
-		switch ($this->content_type) {
+		switch ($this->render_mode) {
+		case 'html':
+			return wrap_html($buffer);
 		case 'text':
 			header('Content-Type: text/plain;');
 			return $buffer;
-		case 'html':
-			return wrap_html($buffer);
 		default:
 			return $buffer;
 		}
@@ -317,7 +317,7 @@ function starts_with($string, $prefix) {
 	return substr($string, 0, strlen($prefix)) == $prefix;
 }
 
-function view_page_latest($state, $slug, $mode)
+function view_page_latest($state, $slug)
 {
 	$statement = $state->pdo->prepare('
 		SELECT id, slug, body, time_created, image_hash
@@ -336,14 +336,14 @@ function view_page_latest($state, $slug, $mode)
 
 	$page->Anchor($state);
 
-	if ($mode === 'text') {
+	if ($state->render_mode === 'text') {
 		render_source($page);
 	} else {
 		render_latest($page, $state);
 	}
 }
 
-function view_page_at_revision($state, $slug, $id, $mode)
+function view_page_at_revision($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare('
 		SELECT id, slug, body, time_created, image_hash
@@ -362,7 +362,7 @@ function view_page_at_revision($state, $slug, $id, $mode)
 
 	$page->Anchor($state);
 
-	if ($mode === 'text') {
+	if ($state->render_mode === 'text') {
 		render_source($page);
 	} else {
 		render_revision($page);
@@ -384,6 +384,7 @@ function view_image_latest($state, $slug)
 	$statement->bindColumn('file_size', $file_size, PDO::PARAM_INT);
 
 	if ($statement->fetch(PDO::FETCH_BOUND)) {
+		$state->render_mode = $content_type;
 		header("Content-Type: $content_type");
 		header("Content-Length: $file_size");
 		header("ETag: $image_hash");
@@ -401,8 +402,6 @@ function view_image_latest($state, $slug)
 	} else {
 		render_page_not_found($slug);
 	}
-
-
 }
 
 function view_image_at_revision($state, $slug, $id)
@@ -420,6 +419,7 @@ function view_image_at_revision($state, $slug, $id)
 	$statement->bindColumn('file_size', $file_size, PDO::PARAM_INT);
 
 	if ($statement->fetch(PDO::FETCH_BOUND)) {
+		$state->render_mode = $content_type;
 		header("Content-Type: $content_type");
 		header("Content-Length: $file_size");
 		header("ETag: $image_hash");
@@ -571,8 +571,8 @@ case 'GET':
 		exit;
 	}
 
-	ob_start($state);
 	$panes = array();
+	$actions = array();
 
 	// Normalize query parameters into (slug, id, action) tuples.
 	foreach ($_GET as $slug => $action) {
@@ -580,10 +580,37 @@ case 'GET':
 			$ids = $action;
 			foreach ($ids as $id => $action) {
 				$panes[] = ['slug' => $slug, 'id' => $id, 'action' => $action];
+				$actions[] = $action ?: 'html';
 			}
 		} else {
 			$panes[] = ['slug' => $slug, 'id' => null, 'action' => $action];
+			$actions[] = $action ?: 'html';
 		}
+	}
+
+	ob_start($state);
+
+	$pane_count = count($panes);
+	$actions_counts = array_count_values($actions);
+	$actions_text = $actions_counts['text'] ?? 0;
+	$actions_image = $actions_counts['image'] ?? 0;
+
+	if ($actions_text == $pane_count) {
+		// All text.
+		$state->render_mode = 'text';
+	} elseif ($actions_text > 0) {
+		// Text mixed with other modes.
+		header($_SERVER['SERVER_PROTOCOL'] . ' 422 Unprocessable Content');
+		exit('Incompatible actions specified: ' . implode(', ', $actions) . '.');
+	}
+
+	if ($actions_image == 1 && $pane_count == 1) {
+		// Single image.
+		$state->render_mode = 'image';
+	} elseif ($actions_image > 0) {
+		// Image mixed with other modes.
+		header($_SERVER['SERVER_PROTOCOL'] . ' 422 Unprocessable Content');
+		exit('Incompatible actions specified: ' . implode(', ', $actions) . '.');
 	}
 
 	foreach ($panes as ['slug' => $slug, 'id' => $id, 'action' => $action]) {
@@ -619,30 +646,23 @@ case 'GET':
 			return;
 		}
 
-		if (empty($action)) {
-			$action = 'html';
-		}
-
 		switch ($action) {
 		case 'edit':
-			$state->content_type = 'html';
 			view_edit($state, $slug, $id);
 			break;
 		case 'history':
-			$state->content_type = 'html';
 			view_history($state, $slug, $id);
 			break;
 		case 'backlinks':
-			$state->content_type = 'html';
 			view_backlinks($state, $slug, $id);
 			break;
-		case 'html':
 		case 'text':
-			$state->content_type = $action;
+		case 'html':
+		case '':
 			if ($id) {
-				view_page_at_revision($state, $slug, $id, $action);
+				view_page_at_revision($state, $slug, $id);
 			} else {
-				view_page_latest($state, $slug, $action);
+				view_page_latest($state, $slug);
 			}
 			break;
 		case 'image':
