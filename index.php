@@ -9,10 +9,14 @@ defined('CACHE_MAX_AGE') or define('CACHE_MAX_AGE', 60 * 10);
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
 
+const AN_URL = 'https?://[^\s/$.?#].[^\s]*[^\s.,;]';
+
 const RE_HASH_SHA1 = '/^[[:xdigit:]]{40}$/';
 const RE_PAGE_SLUG = '/\b(?<slug>\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+)\b/u';
 const RE_PAGE_LINK = '/(?:\[(?<title>.+?)\])?\b(?<slug>\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+)(?:=(?<action>[a-z]+)\b)?/u';
-const RE_IMAGE_EMBED = '/^\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+=image$/u';
+const RE_HREF_LINK = '@('.AN_URL.')@ui';
+const RE_FIGURE_IMAGE = '/^\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+=image$/u';
+const RE_FIGURE_LINK = '@^'.AN_URL.'$@i';
 const RE_WORD_BOUNDARY = '/((?<=\p{Ll}|\d)(?=\p{Lu})|(?<=\p{Ll})(?=\d))/u';
 
 
@@ -196,7 +200,7 @@ class Revision
 
 			$line = trim($line);
 
-			if (preg_match(RE_IMAGE_EMBED, $line)) {
+			if (preg_match(RE_FIGURE_IMAGE, $line)) {
 				if ($inside_pre) {
 					$inside_pre = false;
 					yield '</pre>';
@@ -222,7 +226,7 @@ class Revision
 				continue;
 			}
 
-			if (preg_match('#^https?://[^ ]+$#', $line)) {
+			if (preg_match(RE_FIGURE_LINK, $line)) {
 				if ($inside_pre) {
 					$inside_pre = false;
 					yield '</pre>';
@@ -267,6 +271,22 @@ class Revision
 	}
 
 	private function Linkify($text)
+	{
+		$parts = preg_split(RE_HREF_LINK, $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+		$result = '';
+		$part = current($parts);
+		while ($part !== false) {
+			$result .= $this->LinkifySlugs($part);
+
+			$link_href = next($parts);
+			$result .= "<a href=\"$link_href\">$link_href</a>";
+
+			$part = next($parts);
+		}
+		return $result;
+	}
+
+	private function LinkifySlugs($text)
 	{
 		$state = $this->state;
 		$trail = $this->state->nav_trail;
