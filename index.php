@@ -95,6 +95,8 @@ class Revision
 	public $body;
 	public $date_created;
 	public $image_hash;
+	public $image_width;
+	public $image_height;
 
 	private $state;
 	private $time_created;
@@ -340,8 +342,8 @@ function starts_with($string, $prefix) {
 function view_page_latest($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT id, slug, body, time_created, image_hash
-		FROM latest
+		SELECT id, slug, body, latest.time_created, image_hash, image_width, image_height
+		FROM latest LEFT JOIN images ON image_hash = hash
 		WHERE slug = ?
 	;');
 
@@ -366,8 +368,8 @@ function view_page_latest($state, $slug)
 function view_page_at_revision($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare('
-		SELECT id, slug, body, time_created, image_hash
-		FROM revisions
+		SELECT id, slug, body, latest.time_created, image_hash, image_width, image_height
+		FROM revisions LEFT JOIN images ON image_hash = hash
 		WHERE slug = ? AND id = ?
 	;');
 
@@ -744,9 +746,12 @@ case 'POST':
 				exit('Only JPG, PNG, WEBP are accepted.');
 			}
 
-			if (imagesx($image) > 470) {
+			$image_width = imagesx($image);
+			if ($image_width > 470) {
 				$image = imagescale($image, 470);
+				$image_width = imagesx($image);
 			}
+			$image_height = imagesy($image);
 
 			if ($image_file_type != 'image/webp') {
 				$image_file_type = 'image/webp';
@@ -772,8 +777,8 @@ case 'POST':
 		}
 
 		$statement = $state->pdo->prepare('
-			INSERT OR IGNORE INTO images (hash, page_slug, content_type, time_created, remote_addr, image_data, file_size, file_name)
-			VALUES (:hash, :page_slug, :content_type, :time_created, :remote_addr, :image_data, :file_size, :file_name)
+			INSERT OR IGNORE INTO images (hash, page_slug, content_type, time_created, remote_addr, image_data, image_width, image_height, file_size, file_name)
+			VALUES (:hash, :page_slug, :content_type, :time_created, :remote_addr, :image_data, :image_width, :image_height, :file_size, :file_name)
 		;');
 
 		$image_hash = sha1_file($image_temp_name);
@@ -785,6 +790,8 @@ case 'POST':
 		$statement->bindParam('time_created', $time, PDO::PARAM_INT);
 		$statement->bindParam('remote_addr', $addr, PDO::PARAM_STR);
 		$statement->bindParam('image_data', $file, PDO::PARAM_LOB);
+		$statement->bindParam('image_width', $image_width, PDO::PARAM_INT);
+		$statement->bindParam('image_height', $image_height, PDO::PARAM_INT);
 		$statement->bindParam('file_size', $image_file_size, PDO::PARAM_INT);
 		$statement->bindParam('file_name', $image_file['name'], PDO::PARAM_STR);
 
@@ -897,14 +904,15 @@ function wrap_html($buffer)
 				margin: 1rem;
 			}
 
+			article a[href^="http"],
 			article figure a {
-				text-decoration: underline;
 				word-break: break-all;
 			}
 
 			article figure img {
 				display: block;
 				max-width: 100%;
+				height: auto;
 				object-fit: cover;
 			}
 
@@ -1053,7 +1061,7 @@ function render_latest($page, $state)
 		</h1>
 
 	<?php if ($page->image_hash): ?>
-		<figure><img src="?<?=$page->slug?>=image"></figure>
+		<figure><img src="?<?=$page->slug?>=image" width="<?=$page->image_width?>" height="<?=$page->image_height?>"></figure>
 	<?php endif ?>
 
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
@@ -1088,7 +1096,7 @@ function render_revision($page)
 		</h1>
 
 	<?php if ($page->image_hash): ?>
-		<figure><img src="?<?=$page->slug?>[<?=$page->id?>]=image"></figure>
+		<figure><img src="?<?=$page->slug?>[<?=$page->id?>]=image" width="<?=$page->image_width?>" height="<?=$page->image_height?>"></figure>
 	<?php endif ?>
 
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
