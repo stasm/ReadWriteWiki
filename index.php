@@ -124,6 +124,8 @@ class Revision
 		$inside_pre = false;
 
 		foreach(explode(PHP_EOL, $this->body) as $line) {
+			$line = htmlspecialchars($line);
+
 			if (starts_with($line, '---')) {
 				if ($inside_list) {
 					$inside_list = false;
@@ -138,7 +140,6 @@ class Revision
 
 				$heading = ltrim($line, '- ');
 				if ($heading) {
-					$heading = htmlspecialchars($heading);
 					$heading = $this->Linkify($heading);
 					yield '<h2>' . $heading . '</h2>';
 				}
@@ -157,7 +158,6 @@ class Revision
 				}
 
 				$line = substr($line, 1);
-				$line = htmlspecialchars($line);
 				$line = $this->Inline($line);
 				$line = $this->Linkify($line);
 				yield '<li>' . $line . '</li>';
@@ -175,12 +175,11 @@ class Revision
 				}
 
 				$line = substr($line, 1);
-				$line = htmlspecialchars($line);
 				yield $line;
 				continue;
 			}
 
-			if (starts_with($line, '> ')) {
+			if (starts_with($line, '&gt; ')) {
 				if ($inside_list) {
 					$inside_list = false;
 					yield '</ul>';
@@ -190,8 +189,7 @@ class Revision
 					yield '</pre>';
 				}
 
-				$line = substr($line, 1);
-				$line = htmlspecialchars($line);
+				$line = substr($line, 4);
 				$line = $this->Inline($line);
 				$line = $this->Linkify($line);
 				yield '<blockquote>' . $line . '</blockquote>';
@@ -249,7 +247,6 @@ class Revision
 					yield '</pre>';
 				}
 
-				$line = htmlspecialchars($line);
 				$line = $this->Inline($line);
 				$line = $this->Linkify($line);
 				yield '<p>' . $line . '</p>';
