@@ -126,27 +126,6 @@ class Revision
 		foreach(explode(PHP_EOL, $this->body) as $line) {
 			$line = htmlspecialchars($line);
 
-			if (starts_with($line, '---')) {
-				if ($inside_list) {
-					$inside_list = false;
-					yield '</ul>';
-				}
-				if ($inside_pre) {
-					$inside_pre = false;
-					yield '</pre>';
-				}
-
-				yield '<hr>';
-
-				$heading = ltrim($line, '- ');
-				if ($heading) {
-					$heading = $this->Linkify($heading);
-					yield '<h2>' . $heading . '</h2>';
-				}
-
-				continue;
-			}
-
 			if (starts_with($line, '* ')) {
 				if ($inside_pre) {
 					$inside_pre = false;
@@ -179,16 +158,27 @@ class Revision
 				continue;
 			}
 
-			if (starts_with($line, '&gt; ')) {
-				if ($inside_list) {
-					$inside_list = false;
-					yield '</ul>';
-				}
-				if ($inside_pre) {
-					$inside_pre = false;
-					yield '</pre>';
-				}
+			if ($inside_list) {
+				$inside_list = false;
+				yield '</ul>';
+			}
+			if ($inside_pre) {
+				$inside_pre = false;
+				yield '</pre>';
+			}
 
+			if (starts_with($line, '---')) {
+				yield '<hr>';
+
+				$heading = ltrim($line, '- ');
+				if ($heading) {
+					$heading = $this->Linkify($heading);
+					yield '<h2>' . $heading . '</h2>';
+				}
+				continue;
+			}
+
+			if (starts_with($line, '&gt; ')) {
 				$line = substr($line, 4);
 				$line = $this->Inline($line);
 				$line = $this->Linkify($line);
@@ -197,14 +187,6 @@ class Revision
 			}
 
 			$line = trim($line);
-			if ($inside_pre) {
-				$inside_pre = false;
-				yield '</pre>';
-			}
-			if ($inside_list) {
-				$inside_list = false;
-				yield '</ul>';
-			}
 
 			if (preg_match(RE_FIGURE_IMAGE, $line)) {
 				yield "<figure><img src=\"?$line\"/></figure>";
@@ -851,6 +833,10 @@ function wrap_html($buffer)
 				color: firebrick;
 			}
 
+			article a:not([href^="?"]) {
+				word-break: break-all;
+			}
+
 			article h2 {
 				font-size: 1.2rem;
 			}
@@ -874,11 +860,6 @@ function wrap_html($buffer)
 
 			article figure:has(> a) {
 				margin: 1rem;
-			}
-
-			article a:not([href^="?"]),
-			article figure a {
-				word-break: break-all;
 			}
 
 			article figure img {
