@@ -14,7 +14,7 @@ const AN_URL = 'https?://[^\s/$.?#].[^\s]*[^\s.,;]';
 const RE_HASH_SHA1 = '/^[[:xdigit:]]{40}$/';
 const RE_PAGE_SLUG = '/\b(?<slug>\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+)\b/u';
 const RE_PAGE_LINK = '/(?:\[(?<title>.+?)\])?\b(?<slug>\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+)(?:=(?<action>[a-z]+)\b)?/u';
-const RE_HREF_LINK = '@('.AN_URL.')@ui';
+const RE_HREF_LINK = '@(?:\[([^][]+)\])?('.AN_URL.')@ui';
 const RE_FIGURE_IMAGE = '/^\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+=image$/u';
 const RE_FIGURE_LINK = '@^'.AN_URL.'$@i';
 const RE_WORD_BOUNDARY = '/((?<=\p{Ll}|\d)(?=\p{Lu})|(?<=\p{Ll})(?=\d))/u';
@@ -280,8 +280,14 @@ class Revision
 		while ($part !== false) {
 			$result .= $this->LinkifySlugs($part);
 
-			$link_href = next($parts);
-			$result .= "<a href=\"$link_href\">$link_href</a>";
+			$link_text = next($parts);
+			if ($link_text) {
+				$link_href = next($parts);
+				$result .= "<a href=\"$link_href\">$link_text</a>";
+			} else {
+				$link_href = next($parts);
+				$result .= "<a href=\"$link_href\">$link_href</a>";
+			}
 
 			$part = next($parts);
 		}
