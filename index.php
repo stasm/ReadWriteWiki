@@ -246,11 +246,10 @@ class Revision
 			$result .= $this->LinkifySlugs($part);
 
 			$link_text = next($parts);
+			$link_href = next($parts);
 			if ($link_text) {
-				$link_href = next($parts);
 				$result .= "<a href=\"$link_href\">$link_text</a>";
-			} else {
-				$link_href = next($parts);
+			} elseif ($link_href) {
 				$result .= "<a href=\"$link_href\">$link_href</a>";
 			}
 
