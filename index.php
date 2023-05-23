@@ -197,65 +197,35 @@ class Revision
 			}
 
 			$line = trim($line);
+			if ($inside_pre) {
+				$inside_pre = false;
+				yield '</pre>';
+			}
+			if ($inside_list) {
+				$inside_list = false;
+				yield '</ul>';
+			}
 
 			if (preg_match(RE_FIGURE_IMAGE, $line)) {
-				if ($inside_pre) {
-					$inside_pre = false;
-					yield '</pre>';
-				}
-				if ($inside_list) {
-					$inside_list = false;
-					yield '</ul>';
-				}
 				yield "<figure><img src=\"?$line\"/></figure>";
 				continue;
 			}
 
 			if (preg_match('#^https?://.+\.(jpg|jpeg|png|gif|webp)$#', $line)) {
-				if ($inside_pre) {
-					$inside_pre = false;
-					yield '</pre>';
-				}
-				if ($inside_list) {
-					$inside_list = false;
-					yield '</ul>';
-				}
 				yield "<figure><img src=\"$line\"/></figure>";
 				continue;
 			}
 
 			if (preg_match(RE_FIGURE_LINK, $line)) {
-				if ($inside_pre) {
-					$inside_pre = false;
-					yield '</pre>';
-				}
-				if ($inside_list) {
-					$inside_list = false;
-					yield '</ul>';
-				}
 				yield "<figure><a href=\"$line\">$line</a></figure>";
 				continue;
 			}
 
 			if ($line != '') {
-				if ($inside_list) {
-					$inside_list = false;
-					yield '</ul>';
-				}
-				if ($inside_pre) {
-					$inside_pre = false;
-					yield '</pre>';
-				}
-
 				$line = $this->Inline($line);
 				$line = $this->Linkify($line);
 				yield '<p>' . $line . '</p>';
 				continue;
-			}
-
-			if ($inside_pre) {
-				$inside_pre = false;
-				yield '</pre>';
 			}
 		}
 
