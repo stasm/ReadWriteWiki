@@ -322,7 +322,7 @@ function view_page_latest($state, $slug)
 function view_page_at_revision($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare('
-		SELECT id, slug, body, latest.time_created, image_hash, image_width, image_height
+		SELECT id, slug, body, revisions.time_created, image_hash, image_width, image_height
 		FROM revisions LEFT JOIN images ON image_hash = hash
 		WHERE slug = ? AND id = ?
 	;');
