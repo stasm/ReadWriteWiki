@@ -189,12 +189,12 @@ class Revision
 			$line = trim($line);
 
 			if (preg_match(RE_FIGURE_IMAGE, $line)) {
-				yield "<figure><img src=\"?$line\"/></figure>";
+				yield "<figure><img src=\"?$line\" loading=lazy></figure>";
 				continue;
 			}
 
 			if (preg_match('#^https?://.+\.(jpg|jpeg|png|gif|webp)$#', $line)) {
-				yield "<figure><img src=\"$line\"/></figure>";
+				yield "<figure><img src=\"$line\" loading=lazy></figure>";
 				continue;
 			}
 
@@ -266,7 +266,7 @@ class Revision
 						$slug .= "=$action";
 
 						if ($action == 'image') {
-							return "<img src=\"?$slug\">";
+							return "<img src=\"?$slug\" loading=lazy>";
 						}
 					}
 
