@@ -23,6 +23,7 @@ class State
 	public $pdo;
 	public $revision_created = false;
 	public $render_mode = 'html';
+	public $title;
 
 	public function __construct()
 	{
@@ -38,7 +39,7 @@ class State
 	{
 		switch ($this->render_mode) {
 		case 'html':
-			return wrap_html($buffer);
+			return wrap_html($this->title, $buffer);
 		case 'text':
 			header('Content-Type: text/plain;');
 			return $buffer;
@@ -557,107 +558,79 @@ $state = new State();
 
 switch (strtoupper($_SERVER['REQUEST_METHOD'])) {
 case 'GET':
-	if (empty($_GET)) {
+	$slug = array_key_first($_GET);
+	if (!$slug) {
 		header('Location: ?' . MAIN_PAGE, true, 303);
 		exit;
 	}
 
-	$panes = array();
-	$actions = array();
-
-	// Normalize query parameters into (slug, id, action) tuples.
-	foreach ($_GET as $slug => $action) {
-		if (is_array($action)) {
-			$ids = $action;
-			foreach ($ids as $id => $action) {
-				$panes[] = ['slug' => $slug, 'id' => $id, 'action' => $action];
-				$actions[] = $action ?: 'html';
-			}
-		} else {
-			$panes[] = ['slug' => $slug, 'id' => null, 'action' => $action];
-			$actions[] = $action ?: 'html';
-		}
+	$state->title = $slug;
+	$action = $_GET[$slug];
+	if (is_array($action)) {
+		$id = array_key_first($action);
+		$action = $action[$id];
+		$state->title .= $action ? "[$id]=$action" : "[$id]";
+	} else {
+		$id = null;
+		$state->title .= $action ? "=$action" : '';
 	}
 
 	ob_start($state);
 
-	$pane_count = count($panes);
-	$actions_counts = array_count_values($actions);
-	$actions_text = $actions_counts['text'] ?? 0;
-	$actions_image = $actions_counts['image'] ?? 0;
+	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_SLUG]])) {
+		render_not_valid($slug);
+		exit;
+	}
 
-	if ($actions_text == $pane_count) {
-		// All text.
+	if ($id && !filter_var($id, FILTER_VALIDATE_INT)) {
+		render_not_valid($slug, $id);
+		exit;
+	}
+
+	switch ($slug) {
+	case RECENT_CHANGES:
+		$remote_ip = $action;
+		if ($remote_ip == null) {
+			view_recent_changes($state, $id);
+		} elseif (filter_var($remote_ip, FILTER_VALIDATE_IP)) {
+			view_recent_changes_from($state, $remote_ip, $id);
+		} else {
+			render_not_valid($slug, null, null, $remote_ip);
+		}
+		return;
+	}
+
+	switch ($action) {
+	case 'diff':
+		view_diff_at_revision($state, $slug, $id);
+		break;
+	case 'edit':
+		view_edit($state, $slug, $id);
+		break;
+	case 'history':
+		view_history($state, $slug, $id);
+		break;
+	case 'backlinks':
+		view_backlinks($state, $slug, $id);
+		break;
+	case 'text':
 		$state->render_mode = 'text';
-	} elseif ($actions_text > 0) {
-		// Text mixed with other modes.
-		header($_SERVER['SERVER_PROTOCOL'] . ' 422 Unprocessable Content');
-		exit('Incompatible actions specified: ' . implode(', ', $actions) . '.');
-	}
-
-	if ($actions_image == 1 && $pane_count == 1) {
-		// Single image.
+	case 'html':
+	case '':
+		if ($id) {
+			view_page_at_revision($state, $slug, $id);
+		} else {
+			view_page_latest($state, $slug);
+		}
+		break;
+	case 'image':
 		$state->render_mode = 'image';
-	} elseif ($actions_image > 0) {
-		// Image mixed with other modes.
-		header($_SERVER['SERVER_PROTOCOL'] . ' 422 Unprocessable Content');
-		exit('Incompatible actions specified: ' . implode(', ', $actions) . '.');
-	}
-
-	foreach ($panes as ['slug' => $slug, 'id' => $id, 'action' => $action]) {
-		if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_SLUG]])) {
-			render_not_valid($slug);
-			continue;
+		if ($id) {
+			view_image_at_revision($state, $slug, $id);
+		} else {
+			view_image_latest($state, $slug);
 		}
-
-		if ($id && !filter_var($id, FILTER_VALIDATE_INT)) {
-			render_not_valid($slug, $id);
-			continue;
-		}
-
-		switch ($slug) {
-		case RECENT_CHANGES:
-			$remote_ip = $action;
-			if ($remote_ip == null) {
-				view_recent_changes($state, $id);
-			} elseif (filter_var($remote_ip, FILTER_VALIDATE_IP)) {
-				view_recent_changes_from($state, $remote_ip, $id);
-			} else {
-				render_not_valid($slug, null, null, $remote_ip);
-			}
-			return;
-		}
-
-		switch ($action) {
-		case 'diff':
-			view_diff_at_revision($state, $slug, $id);
-			break;
-		case 'edit':
-			view_edit($state, $slug, $id);
-			break;
-		case 'history':
-			view_history($state, $slug, $id);
-			break;
-		case 'backlinks':
-			view_backlinks($state, $slug, $id);
-			break;
-		case 'text':
-		case 'html':
-		case '':
-			if ($id) {
-				view_page_at_revision($state, $slug, $id);
-			} else {
-				view_page_latest($state, $slug);
-			}
-			break;
-		case 'image':
-			if ($id) {
-				view_image_at_revision($state, $slug, $id);
-			} else {
-				view_image_latest($state, $slug);
-			}
-			break;
-		}
+		break;
 	}
 
 	ob_end_flush();
@@ -733,7 +706,6 @@ case 'POST':
 			exit('File is not an image; MIME type must be image/*.');
 		}
 
-
 		if ($image_file_size > 100000) {
 			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
 			exit('File too big; must be less than 100KB.');
@@ -791,21 +763,8 @@ case 'POST':
 
 // Rendering templates
 
-function wrap_html($buffer)
+function wrap_html($title, $buffer)
 {
-	$panels = array();
-	foreach ($_GET as $slug => $action) {
-		if (is_array($action)) {
-			$ids = implode(',', array_keys($action));
-			$panels[] = "{$slug}[$ids]";
-		} else if ($action) {
-			$panels[] = "$slug=$action";
-		} else {
-			$panels[] = $slug;
-		}
-	}
-
-	$title = htmlspecialchars(implode(' & ', $panels));
 	return <<<EOF
 <!doctype html>
 <html>
