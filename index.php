@@ -1167,7 +1167,7 @@ function render_history($slug, $changes)
 				<a href="?<?=$slug?>[<?=$change->id?>]">
 					[<?=$change->id?>]
 				</a>
-				(<a href="?<?=$slug?>[<?=$change->id?>]=diff"><?=sprintf("%+d", $change->delta)?> chars</a>)
+				<small>(<a href="?<?=$slug?>[<?=$change->id?>]=diff"><?=sprintf("%+d", $change->delta)?>b</a>)</small>
 				on <?=$change->date_created->format(AS_DATE)?>
 				at <?=$change->date_created->format(AS_TIME)?>
 				from <a href="?<?=RECENT_CHANGES?>=<?=$change->remote_ip?>"><?=$change->remote_ip?></a>
@@ -1263,7 +1263,7 @@ function render_recent_changes($p, $changes)
 				<a href="?<?=$change->slug?>[<?=$change->id?>]">
 					<?=$change->slug?>[<?=$change->id?>]
 				</a>
-				(<a href="?<?=$change->slug?>[<?=$change->prev_id?>]&<?=$change->slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
+				<small>(<a href="?<?=$change->slug?>[<?=$change->id?>]=diff"><?=sprintf("%+d", $change->delta)?>b</a>)</small>
 				on <?=$change->date_created->format(AS_DATE)?>
 				at <?=$change->date_created->format(AS_TIME)?>
 				from <a href="?<?=RECENT_CHANGES?>=<?=$change->remote_ip?>"><?=$change->remote_ip?></a>
@@ -1298,7 +1298,7 @@ function render_recent_changes_from($remote_ip, $p, $changes)
 				<a href="?<?=$change->slug?>[<?=$change->id?>]">
 					<?=$change->slug?>[<?=$change->id?>]
 				</a>
-				(<a href="?<?=$change->slug?>[<?=$change->prev_id?>]&<?=$change->slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
+				<small>(<a href="?<?=$change->slug?>[<?=$change->id?>]=diff"><?=sprintf("%+d", $change->delta)?>b</a>)</small>
 				on <?=$change->date_created->format(AS_DATE)?>
 				at <?=$change->date_created->format(AS_TIME)?>
 			</li>
