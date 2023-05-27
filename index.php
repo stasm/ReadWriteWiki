@@ -1325,7 +1325,7 @@ function render_recent_changes_from($remote_ip, $p, $changes)
 
 function diff($old, $new){
     $matrix = array();
-    $maxlen = 0;
+    $maxlen = 1;
     foreach ($old as $oindex => $ovalue) {
         $nkeys = array_keys($new, $ovalue);
         foreach ($nkeys as $nindex) {
@@ -1338,7 +1338,7 @@ function diff($old, $new){
             }
         }
     }
-    if ($maxlen == 0) {
+    if ($maxlen == 1) {
 		return array(array('d'=>$old, 'i'=>$new));
 	}
     return array_merge(
@@ -1349,13 +1349,15 @@ function diff($old, $new){
 
 function htmlDiff($old, $new){
     $ret = '';
-    $diff = diff(preg_split("/ /", $old), preg_split("/ /", $new));
+	$old = preg_split('/(\s+)/', $old, -1, PREG_SPLIT_DELIM_CAPTURE);
+	$new = preg_split('/(\s+)/', $new, -1, PREG_SPLIT_DELIM_CAPTURE);
+    $diff = diff($old, $new);
     foreach ($diff as $k) {
         if (is_array($k)) {
-            $ret .= (!empty($k['d'])?"<del>".implode(' ',$k['d'])."</del> ":'').
-                (!empty($k['i'])?"<ins>".implode(' ',$k['i'])."</ins> ":'');
+            $ret .= (!empty($k['d'])?"<del>".implode($k['d'])."</del>":'').
+                (!empty($k['i'])?"<ins>".implode($k['i'])."</ins>":'');
 		} else {
-			$ret .= $k . ' ';
+			$ret .= $k;
 		}
     }
     return $ret;
