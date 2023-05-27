@@ -66,18 +66,21 @@ function captureLinks(evt) {
 		return;
 	}
 
-	if (evt.target.parentElement.tagName === "H1") {
-		evt.preventDefault();
-		let win = evt.currentTarget;
-		let frame = win.frameElement;
-		while (frame.parentElement.lastElementChild !== frame) {
-			frame.parentElement.lastElementChild.remove();
+	evt.preventDefault();
+	let win = evt.currentTarget;
+	let frame = win.frameElement;
+
+	// Remove all panes to the right.
+	while (frame.parentElement.lastElementChild !== frame) {
+		frame.parentElement.lastElementChild.remove();
+	}
+
+	if (win.location.href === evt.target.href) {
+		if (window.location.search !== win.location.search) {
+			history.pushState(getState(), "", win.location.search);
 		}
-		history.pushState(getState(), win.location.search, win.location.search);
-	} else  {
-		evt.preventDefault();
+	} else {
 		let frame = pushPane(evt.target)
-		//evt.currentTarget.frameElement.insertAdjacentElement("afterend", frame);
 		document.body.appendChild(frame);
 		frame.scrollIntoView();
 	}
@@ -93,7 +96,7 @@ function createFrame(href) {
 function pushPane(url) {
 	let state = getState();
 	state.push(url.href);
-	history.pushState(state, url.search, url.search);
+	history.pushState(state, "", url.search);
 	document.title = url.search;
 	return createFrame(url.href);
 }
