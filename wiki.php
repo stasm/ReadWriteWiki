@@ -859,12 +859,12 @@ function wrap_html($title, $buffer)
 			}
 
 			ins {
-				background: honeydew;
+				background: palegreen;
 				text-decoration: none;
 			}
 
 			del {
-				background: mistyrose;
+				background: pink;
 				text-decoration: none;
 			}
 		</style>
@@ -992,6 +992,7 @@ function render_latest($page, $state)
 		<footer class="meta">
 			last modified on <span title="<?=$page->date_created->format(AS_TIME)?>">
 				<?=$page->date_created->format(AS_DATE)?></span>
+			<a href="?<?=$page->slug?>=diff">diff</a>
 			<a href="?<?=$page->slug?>=edit">edit</a>
 			<br>
 			<a href="?<?=$page->slug?>">html</a>
@@ -1001,7 +1002,6 @@ function render_latest($page, $state)
 		<?php endif ?>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
-			<a href="?<?=$page->slug?>=diff">diff</a>
 			<br>
 			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
@@ -1028,6 +1028,7 @@ function render_revision($page)
 		<footer class="meta">
 			revision <?=$page->id?> from <span title="<?=$page->date_created->format(AS_TIME)?>">
 				<?=$page->date_created->format(AS_DATE)?></span>
+			<a href="?<?=$page->slug?>[<?=$page->id?>]=diff">diff</a>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=edit">restore</a>
 			<br>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]">html</a>
@@ -1037,7 +1038,6 @@ function render_revision($page)
 		<?php endif ?>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=history">history</a>
-			<a href="?<?=$page->slug?>[<?=$page->id?>]=diff">diff</a>
 			<a href="?<?=$page->slug?>">latest</a>
 			<br>
 			<a href="?">home</a>
@@ -1076,7 +1076,6 @@ function render_edit($page)
 			<a href="?<?=$page->slug?>=text">text</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
-			<a href="?<?=$page->slug?>=diff">diff</a>
 			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
@@ -1098,7 +1097,7 @@ function render_history($slug, $changes)
 				<a href="?<?=$slug?>[<?=$change->id?>]">
 					[<?=$change->id?>]
 				</a>
-				(<a href="?<?=$slug?>[<?=$change->id?>]=diff"><?=sprintf("%+d", $change->delta)?> chars</a>)
+				<small>(<a href="?<?=$slug?>[<?=$change->id?>]=diff"><?=sprintf("%+d", $change->delta)?>b</a>)</small>
 				on <?=$change->date_created->format(AS_DATE)?>
 				at <?=$change->date_created->format(AS_TIME)?>
 				from <a href="?<?=RECENT_CHANGES?>=<?=$change->remote_ip?>"><?=$change->remote_ip?></a>
@@ -1194,7 +1193,7 @@ function render_recent_changes($p, $changes)
 				<a href="?<?=$change->slug?>[<?=$change->id?>]">
 					<?=$change->slug?>[<?=$change->id?>]
 				</a>
-				(<a href="?<?=$change->slug?>[<?=$change->prev_id?>]&<?=$change->slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
+				<small>(<a href="?<?=$change->slug?>[<?=$change->id?>]=diff"><?=sprintf("%+d", $change->delta)?>b</a>)</small>
 				on <?=$change->date_created->format(AS_DATE)?>
 				at <?=$change->date_created->format(AS_TIME)?>
 				from <a href="?<?=RECENT_CHANGES?>=<?=$change->remote_ip?>"><?=$change->remote_ip?></a>
@@ -1229,7 +1228,7 @@ function render_recent_changes_from($remote_ip, $p, $changes)
 				<a href="?<?=$change->slug?>[<?=$change->id?>]">
 					<?=$change->slug?>[<?=$change->id?>]
 				</a>
-				(<a href="?<?=$change->slug?>[<?=$change->prev_id?>]&<?=$change->slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
+				<small>(<a href="?<?=$change->slug?>[<?=$change->id?>]=diff"><?=sprintf("%+d", $change->delta)?>b</a>)</small>
 				on <?=$change->date_created->format(AS_DATE)?>
 				at <?=$change->date_created->format(AS_TIME)?>
 			</li>
@@ -1248,46 +1247,47 @@ function render_recent_changes_from($remote_ip, $p, $changes)
 	</article>
 <?php }
 
-/*
-    Paul's Simple Diff Algorithm v 0.1
-    (C) Paul Butler 2007 <http://www.paulbutler.org/>
-    May be used and distributed under the zlib/libpng license.
-*/
+// Paul's Simple Diff Algorithm v 0.1
+// (C) Paul Butler 2007 <http://www.paulbutler.org/>
+// May be used and distributed under the zlib/libpng license.
+// https://paulbutler.org/2007/a-simple-diff-algorithm-in-php/
 
 function diff($old, $new){
-    $matrix = array();
-    $maxlen = 0;
-    foreach ($old as $oindex => $ovalue) {
-        $nkeys = array_keys($new, $ovalue);
-        foreach ($nkeys as $nindex) {
-            $matrix[$oindex][$nindex] = isset($matrix[$oindex - 1][$nindex - 1]) ?
-                $matrix[$oindex - 1][$nindex - 1] + 1 : 1;
-            if ($matrix[$oindex][$nindex] > $maxlen) {
-                $maxlen = $matrix[$oindex][$nindex];
-                $omax = $oindex + 1 - $maxlen;
-                $nmax = $nindex + 1 - $maxlen;
-            }
-        }
-    }
-    if ($maxlen == 0) {
+	$matrix = array();
+	$maxlen = 1;
+	foreach ($old as $oindex => $ovalue) {
+		$nkeys = array_keys($new, $ovalue);
+		foreach ($nkeys as $nindex) {
+			$matrix[$oindex][$nindex] = isset($matrix[$oindex - 1][$nindex - 1]) ?
+				$matrix[$oindex - 1][$nindex - 1] + 1 : 1;
+			if ($matrix[$oindex][$nindex] > $maxlen) {
+				$maxlen = $matrix[$oindex][$nindex];
+				$omax = $oindex + 1 - $maxlen;
+				$nmax = $nindex + 1 - $maxlen;
+			}
+		}
+	}
+	if ($maxlen == 1) {
 		return array(array('d'=>$old, 'i'=>$new));
 	}
-    return array_merge(
-        diff(array_slice($old, 0, $omax), array_slice($new, 0, $nmax)),
-        array_slice($new, $nmax, $maxlen),
-        diff(array_slice($old, $omax + $maxlen), array_slice($new, $nmax + $maxlen)));
+	return array_merge(
+			diff(array_slice($old, 0, $omax), array_slice($new, 0, $nmax)),
+			array_slice($new, $nmax, $maxlen),
+			diff(array_slice($old, $omax + $maxlen), array_slice($new, $nmax + $maxlen)));
 }
 
 function htmlDiff($old, $new){
-    $ret = '';
-    $diff = diff(preg_split("/ /", $old), preg_split("/ /", $new));
-    foreach ($diff as $k) {
-        if (is_array($k)) {
-            $ret .= (!empty($k['d'])?"<del>".implode(' ',$k['d'])."</del> ":'').
-                (!empty($k['i'])?"<ins>".implode(' ',$k['i'])."</ins> ":'');
+	$ret = '';
+	$old = preg_split('/(\s+)/', $old, -1, PREG_SPLIT_DELIM_CAPTURE);
+	$new = preg_split('/(\s+)/', $new, -1, PREG_SPLIT_DELIM_CAPTURE);
+	$diff = diff($old, $new);
+	foreach ($diff as $k) {
+		if (is_array($k)) {
+			$ret .= (!empty($k['d'])?"<del>".implode($k['d'])."</del>":'').
+				(!empty($k['i'])?"<ins>".implode($k['i'])."</ins>":'');
 		} else {
-			$ret .= $k . ' ';
+			$ret .= $k;
 		}
-    }
-    return $ret;
+	}
+	return $ret;
 }
