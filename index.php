@@ -927,12 +927,12 @@ function wrap_html($buffer)
 			}
 
 			ins {
-				background: honeydew;
+				background: palegreen;
 				text-decoration: none;
 			}
 
 			del {
-				background: mistyrose;
+				background: pink;
 				text-decoration: none;
 			}
 		</style>
