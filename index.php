@@ -1317,48 +1317,47 @@ function render_recent_changes_from($remote_ip, $p, $changes)
 	</article>
 <?php }
 
-/*
-    Paul's Simple Diff Algorithm v 0.1
-    (C) Paul Butler 2007 <http://www.paulbutler.org/>
-    May be used and distributed under the zlib/libpng license.
-*/
+// Paul's Simple Diff Algorithm v 0.1
+// (C) Paul Butler 2007 <http://www.paulbutler.org/>
+// May be used and distributed under the zlib/libpng license.
+// https://paulbutler.org/2007/a-simple-diff-algorithm-in-php/
 
 function diff($old, $new){
-    $matrix = array();
-    $maxlen = 1;
-    foreach ($old as $oindex => $ovalue) {
-        $nkeys = array_keys($new, $ovalue);
-        foreach ($nkeys as $nindex) {
-            $matrix[$oindex][$nindex] = isset($matrix[$oindex - 1][$nindex - 1]) ?
-                $matrix[$oindex - 1][$nindex - 1] + 1 : 1;
-            if ($matrix[$oindex][$nindex] > $maxlen) {
-                $maxlen = $matrix[$oindex][$nindex];
-                $omax = $oindex + 1 - $maxlen;
-                $nmax = $nindex + 1 - $maxlen;
-            }
-        }
-    }
-    if ($maxlen == 1) {
+	$matrix = array();
+	$maxlen = 1;
+	foreach ($old as $oindex => $ovalue) {
+		$nkeys = array_keys($new, $ovalue);
+		foreach ($nkeys as $nindex) {
+			$matrix[$oindex][$nindex] = isset($matrix[$oindex - 1][$nindex - 1]) ?
+				$matrix[$oindex - 1][$nindex - 1] + 1 : 1;
+			if ($matrix[$oindex][$nindex] > $maxlen) {
+				$maxlen = $matrix[$oindex][$nindex];
+				$omax = $oindex + 1 - $maxlen;
+				$nmax = $nindex + 1 - $maxlen;
+			}
+		}
+	}
+	if ($maxlen == 1) {
 		return array(array('d'=>$old, 'i'=>$new));
 	}
-    return array_merge(
-        diff(array_slice($old, 0, $omax), array_slice($new, 0, $nmax)),
-        array_slice($new, $nmax, $maxlen),
-        diff(array_slice($old, $omax + $maxlen), array_slice($new, $nmax + $maxlen)));
+	return array_merge(
+			diff(array_slice($old, 0, $omax), array_slice($new, 0, $nmax)),
+			array_slice($new, $nmax, $maxlen),
+			diff(array_slice($old, $omax + $maxlen), array_slice($new, $nmax + $maxlen)));
 }
 
 function htmlDiff($old, $new){
-    $ret = '';
+	$ret = '';
 	$old = preg_split('/(\s+)/', $old, -1, PREG_SPLIT_DELIM_CAPTURE);
 	$new = preg_split('/(\s+)/', $new, -1, PREG_SPLIT_DELIM_CAPTURE);
-    $diff = diff($old, $new);
-    foreach ($diff as $k) {
-        if (is_array($k)) {
-            $ret .= (!empty($k['d'])?"<del>".implode($k['d'])."</del>":'').
-                (!empty($k['i'])?"<ins>".implode($k['i'])."</ins>":'');
+	$diff = diff($old, $new);
+	foreach ($diff as $k) {
+		if (is_array($k)) {
+			$ret .= (!empty($k['d'])?"<del>".implode($k['d'])."</del>":'').
+				(!empty($k['i'])?"<ins>".implode($k['i'])."</ins>":'');
 		} else {
 			$ret .= $k;
 		}
-    }
-    return $ret;
+	}
+	return $ret;
 }
