@@ -1062,6 +1062,7 @@ function render_latest($page, $state)
 		<footer class="meta">
 			last modified on <span title="<?=$page->date_created->format(AS_TIME)?>">
 				<?=$page->date_created->format(AS_DATE)?></span>
+			<a href="?<?=$page->slug?>=diff">diff</a>
 			<a href="?<?=$page->slug?>=edit">edit</a>
 			<br>
 			<a href="?<?=$page->slug?>">html</a>
@@ -1071,7 +1072,6 @@ function render_latest($page, $state)
 		<?php endif ?>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
-			<a href="?<?=$page->slug?>=diff">diff</a>
 			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
@@ -1098,6 +1098,7 @@ function render_revision($page)
 		<footer class="meta">
 			revision <?=$page->id?> from <span title="<?=$page->date_created->format(AS_TIME)?>">
 				<?=$page->date_created->format(AS_DATE)?></span>
+			<a href="?<?=$page->slug?>[<?=$page->id?>]=diff">diff</a>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=edit">restore</a>
 			<br>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]">html</a>
@@ -1107,7 +1108,6 @@ function render_revision($page)
 		<?php endif ?>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=history">history</a>
-			<a href="?<?=$page->slug?>[<?=$page->id?>]=diff">diff</a>
 			<a href="?<?=$page->slug?>">latest</a>
 			<br>
 			<a href="?">home</a>
@@ -1146,7 +1146,6 @@ function render_edit($page)
 			<a href="?<?=$page->slug?>=text">text</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
-			<a href="?<?=$page->slug?>=diff">diff</a>
 			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
