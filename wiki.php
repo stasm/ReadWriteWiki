@@ -23,7 +23,6 @@ class State
 	public $pdo;
 	public $revision_created = false;
 	public $render_mode = 'html';
-	public $nav_trail = array();
 
 	public function __construct()
 	{
@@ -245,26 +244,13 @@ class Revision
 	private function LinkifySlugs($text)
 	{
 		$state = $this->state;
-		$trail = $this->state->nav_trail;
-		$trail = [];
-
 		return preg_replace_callback(
 				RE_PAGE_LINK,
-				function($matches) use(&$state, $trail) {
+				function($matches) use(&$state) {
 					$slug = $matches["slug"];
 					$missing = $state->PageExists($slug) ? '' : 'data-missing';
 
-					$index = array_search($slug, $trail);
-					if ($index !== false) {
-						// The page is already in the navigation trail.
-						// Truncate the trail up to it.
-						$trail = array_slice($trail, 0, $index);
-					}
-					$trail[] = $slug;
-					$breadcrumbs = implode('&', $trail);
-
 					if ($action = $matches["action"]) {
-						$breadcrumbs .= "=$action";
 						$slug .= "=$action";
 
 						if ($action == 'image') {
@@ -276,7 +262,7 @@ class Revision
 						$slug = $title;
 					}
 
-					return "<a $missing href=\"?$breadcrumbs\">$slug</a>";
+					return "<a $missing href=\"?$slug\">$slug</a>";
 				},
 				$text,
 				-1, $count, PREG_UNMATCHED_AS_NULL);
@@ -597,18 +583,9 @@ case 'GET':
 			continue;
 		}
 
-		if ($id === null) {
-			if (!in_array($slug, $state->nav_trail)) {
-				$state->nav_trail[] = $slug;
-			}
-		} elseif (!filter_var($id, FILTER_VALIDATE_INT)) {
+		if ($id && !filter_var($id, FILTER_VALIDATE_INT)) {
 			render_not_valid($slug, $id);
 			continue;
-		} else {
-			$slugid = "${slug}[$id]";
-			if (!in_array($slugid, $state->nav_trail)) {
-				$state->nav_trail[] = $slugid;
-			}
 		}
 
 		switch ($slug) {
@@ -993,9 +970,7 @@ $page->body
 }
 
 function render_latest($page, $state)
-{
-	$breadcrumbs = implode('&', $state->nav_trail);
-?>
+{ ?>
 	<article>
 	<?php if ($state->revision_created): ?>
 		<header class="meta" style="background:cornsilk">
@@ -1004,7 +979,7 @@ function render_latest($page, $state)
 	<?php endif ?>
 
 		<h1>
-			<a href="?<?=$breadcrumbs?>">
+			<a href="?<?=$page->slug?>">
 				<?=$page->title?>
 			</a>
 		</h1>
