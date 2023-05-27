@@ -246,6 +246,8 @@ class Revision
 	{
 		$state = $this->state;
 		$trail = $this->state->nav_trail;
+		$trail = [];
+
 		return preg_replace_callback(
 				RE_PAGE_LINK,
 				function($matches) use(&$state, $trail) {
@@ -806,8 +808,7 @@ function wrap_html($buffer)
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<style>
 			body {
-				display: inline-flex;
-				align-items: flex-start;
+				margin: 0;
 			}
 
 			h1 a {
@@ -816,11 +817,6 @@ function wrap_html($buffer)
 			}
 
 			article {
-				box-sizing: border-box;
-				min-width: min(calc(100vw - 16px), 500px);
-				max-width: 500px;
-				max-height: calc(100vh - 16px);
-				overflow-y: auto;
 				overflow-wrap: break-word;
 				padding: 15px;
 			}
@@ -897,7 +893,7 @@ function wrap_html($buffer)
 			}
 		</style>
 	</head>
-	<body onload="window.scrollTo(document.body.scrollWidth, 0);">
+	<body>
 $buffer
 	</body>
 </html>
@@ -1032,7 +1028,7 @@ function render_latest($page, $state)
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
 			<br>
-			<a href="?">home</a>
+			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>

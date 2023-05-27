@@ -1,0 +1,101 @@
+<!doctype html>
+<title>Wikistack</title>
+<style>
+body {
+	margin: 0;
+	display: inline-flex;
+	align-items: flex-start;
+}
+iframe {
+	display: block;
+	height: 100vh;
+	border: none;
+	box-sizing: border-box;
+	min-width: min(100vw, 500px);
+	max-width: 500px;
+	overflow-y: auto;
+}
+</style>
+<body>
+<script>
+let url = new URL(window.location.href);
+url.pathname = "/wiki.php";
+url.search ||= "?HomePage";
+
+for (let param of url.searchParams) {
+	let pane_url = new URL(url);
+	if (param[1]) {
+		pane_url.search = `?${param[0]}=${param[1]}`;
+	} else {
+		pane_url.search = `?${param[0]}`;
+	}
+	let frame = pushPane(pane_url);
+	document.body.appendChild(frame);
+	frame.scrollIntoView();
+}
+
+window.addEventListener("popstate", (evt) => {
+	for (let i = 0; i < Math.max(window.length, evt.state.length); i++) {
+		let href = evt.state[i];
+		let win = window[i];
+		if (!win) {
+			let frame = createFrame(href);
+			document.body.appendChild(frame);
+			frame.scrollIntoView();
+		} else if (!href) {
+			win.frameElement.remove();
+		} else if (href !== win.location.href) {
+			let frame = createFrame(href);
+			win.frameElement.insertAdjacentElement("beforebegin", frame);
+			frame.scrollIntoView();
+		}
+	}
+});
+
+function getState() {
+	let state = [];
+	for (let i = 0; i < window.length; i++) {
+		let win = window[i];
+		state.push(win.location.href);
+	}
+	return state;
+}
+
+function captureLinks(evt) {
+	if (evt.target.tagName !== "A") {
+		return;
+	}
+
+	if (evt.target.parentElement.tagName === "H1") {
+		evt.preventDefault();
+		let win = evt.currentTarget;
+		let frame = win.frameElement;
+		while (frame.parentElement.lastElementChild !== frame) {
+			frame.parentElement.lastElementChild.remove();
+		}
+		history.pushState(getState(), win.location.search, win.location.search);
+	} else  {
+		evt.preventDefault();
+		let frame = pushPane(evt.target)
+		//evt.currentTarget.frameElement.insertAdjacentElement("afterend", frame);
+		document.body.appendChild(frame);
+		frame.scrollIntoView();
+	}
+}
+
+function createFrame(href) {
+	let frame = document.createElement("iframe");
+	frame.src = href;
+	frame.addEventListener("load", () => frame.contentWindow.addEventListener("click", captureLinks, true));
+	return frame;
+}
+
+function pushPane(url) {
+	let state = getState();
+	state.push(url.href);
+	history.pushState(state, url.search, url.search);
+	document.title = url.search;
+	return createFrame(url.href);
+}
+</script>
+</body>
