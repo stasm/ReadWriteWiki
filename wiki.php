@@ -71,6 +71,8 @@ class Change
 	public $remote_ip;
 	public $size;
 	public $delta;
+	public $body;
+	public $prev_body;
 
 	private $time_created;
 	private $remote_addr;
@@ -454,6 +456,31 @@ function view_history($state, $slug, $id)
 	}
 }
 
+function view_diff_at_revision($state, $slug, $id)
+{
+	$statement = $state->pdo->prepare('
+		SELECT
+			slug, id, time_created, remote_addr, size, body,
+			LEAD(id, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_id,
+			LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size,
+			LEAD(body, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_body
+		FROM changelog
+		WHERE slug = ?' . ($id ? ' AND id <= ?' : '') . '
+		ORDER BY id DESC
+		LIMIT 1
+	;');
+
+	$statement->execute($id ? array($slug, $id) : array($slug));
+	$statement->setFetchMode(PDO::FETCH_CLASS, 'Change');
+	$change = $statement->fetch();
+
+	if (!$change) {
+		render_page_not_found($slug);
+	} else {
+		render_diff($change);
+	}
+}
+
 function view_backlinks($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare($id ? '
@@ -602,6 +629,9 @@ case 'GET':
 		}
 
 		switch ($action) {
+		case 'diff':
+			view_diff_at_revision($state, $slug, $id);
+			break;
 		case 'edit':
 			view_edit($state, $slug, $id);
 			break;
@@ -868,6 +898,16 @@ function wrap_html($buffer)
 				font-family: serif;
 				font-size: 100%;
 			}
+
+			ins {
+				background: honeydew;
+				text-decoration: none;
+			}
+
+			del {
+				background: mistyrose;
+				text-decoration: none;
+			}
 		</style>
 	</head>
 	<body>
@@ -1002,6 +1042,7 @@ function render_latest($page, $state)
 		<?php endif ?>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
+			<a href="?<?=$page->slug?>=diff">diff</a>
 			<br>
 			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
@@ -1037,6 +1078,7 @@ function render_revision($page)
 		<?php endif ?>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=history">history</a>
+			<a href="?<?=$page->slug?>[<?=$page->id?>]=diff">diff</a>
 			<a href="?<?=$page->slug?>">latest</a>
 			<br>
 			<a href="?">home</a>
@@ -1075,6 +1117,7 @@ function render_edit($page)
 			<a href="?<?=$page->slug?>=text">text</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
+			<a href="?<?=$page->slug?>=diff">diff</a>
 			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
@@ -1096,7 +1139,7 @@ function render_history($slug, $changes)
 				<a href="?<?=$slug?>[<?=$change->id?>]">
 					[<?=$change->id?>]
 				</a>
-				(<a href="?<?=$slug?>[<?=$change->prev_id?>]&<?=$slug?>[<?=$change->id?>]"><?=sprintf("%+d", $change->delta)?> chars</a>)
+				(<a href="?<?=$slug?>[<?=$change->id?>]=diff"><?=sprintf("%+d", $change->delta)?> chars</a>)
 				on <?=$change->date_created->format(AS_DATE)?>
 				at <?=$change->date_created->format(AS_TIME)?>
 				from <a href="?<?=RECENT_CHANGES?>=<?=$change->remote_ip?>"><?=$change->remote_ip?></a>
@@ -1109,6 +1152,38 @@ function render_history($slug, $changes)
 			<a href="?<?=$slug?>=text">text</a>
 			<a href="?<?=$slug?>=backlinks">backlinks</a>
 			<a href="?<?=$slug?>=history">history</a>
+			<br>
+			<a href="?">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
+		</footer>
+	</article>
+<?php }
+
+function render_diff($change)
+{
+	$old = htmlspecialchars($change->prev_body ?: '');
+	$new = htmlspecialchars($change->body);
+	$diff = htmlDiff($old, $new);
+?>
+	<article style="background:aliceblue">
+		<h1 class="meta">
+			Diff for <a href="?<?=$change->slug?>"><?=$change->slug?></a>
+			<small>
+			<del><a href="?<?=$change->slug?>[<?=$change->prev_id?>]">
+				[<?=$change->prev_id?>]</a></del> →
+			<ins><a href="?<?=$change->slug?>[<?=$change->id?>]">
+				[<?=$change->id?>]</a></ins>
+			</small>
+		</h1>
+
+		<pre style="background:none"><?=$diff?></pre>
+
+		<footer class="meta">
+			<a href="?<?=$change->slug?>">html</a>
+			<a href="?<?=$change->slug?>=text">text</a>
+			<a href="?<?=$change->slug?>=backlinks">backlinks</a>
+			<a href="?<?=$change->slug?>=history">history</a>
 			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
@@ -1213,3 +1288,47 @@ function render_recent_changes_from($remote_ip, $p, $changes)
 		</footer>
 	</article>
 <?php }
+
+/*
+    Paul's Simple Diff Algorithm v 0.1
+    (C) Paul Butler 2007 <http://www.paulbutler.org/>
+    May be used and distributed under the zlib/libpng license.
+*/
+
+function diff($old, $new){
+    $matrix = array();
+    $maxlen = 0;
+    foreach ($old as $oindex => $ovalue) {
+        $nkeys = array_keys($new, $ovalue);
+        foreach ($nkeys as $nindex) {
+            $matrix[$oindex][$nindex] = isset($matrix[$oindex - 1][$nindex - 1]) ?
+                $matrix[$oindex - 1][$nindex - 1] + 1 : 1;
+            if ($matrix[$oindex][$nindex] > $maxlen) {
+                $maxlen = $matrix[$oindex][$nindex];
+                $omax = $oindex + 1 - $maxlen;
+                $nmax = $nindex + 1 - $maxlen;
+            }
+        }
+    }
+    if ($maxlen == 0) {
+		return array(array('d'=>$old, 'i'=>$new));
+	}
+    return array_merge(
+        diff(array_slice($old, 0, $omax), array_slice($new, 0, $nmax)),
+        array_slice($new, $nmax, $maxlen),
+        diff(array_slice($old, $omax + $maxlen), array_slice($new, $nmax + $maxlen)));
+}
+
+function htmlDiff($old, $new){
+    $ret = '';
+    $diff = diff(preg_split("/ /", $old), preg_split("/ /", $new));
+    foreach ($diff as $k) {
+        if (is_array($k)) {
+            $ret .= (!empty($k['d'])?"<del>".implode(' ',$k['d'])."</del> ":'').
+                (!empty($k['i'])?"<ins>".implode(' ',$k['i'])."</ins> ":'');
+		} else {
+			$ret .= $k . ' ';
+		}
+    }
+    return $ret;
+}
