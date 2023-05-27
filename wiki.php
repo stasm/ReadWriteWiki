@@ -893,7 +893,7 @@ function render_not_valid($slug, $id = null, $p = null, $ip = null)
 		<p><?=htmlspecialchars($slug)?> is not a valid page name.</p>
 	<?php endif ?>
 		<footer class="meta">
-			<a href="?">home</a>
+			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
@@ -909,7 +909,7 @@ function render_page_not_found($slug)
 		<footer class="meta">
 			<a href="?<?=$slug?>=backlinks">backlinks</a>
 			<br>
-			<a href="?">home</a>
+			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
@@ -927,7 +927,7 @@ function render_revision_not_found($slug, $id)
 			<a href="?<?=$slug?>=history">history</a>
 			<a href="?<?=$slug?>">latest</a>
 			<br>
-			<a href="?">home</a>
+			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
@@ -952,7 +952,7 @@ function render_image_not_found($slug, $id = null)
 			<a href="?<?=$slug?>">latest</a>
 		<?php endif ?>
 			<br>
-			<a href="?">home</a>
+			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
@@ -1038,7 +1038,7 @@ function render_revision($page)
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=history">history</a>
 			<a href="?<?=$page->slug?>">latest</a>
 			<br>
-			<a href="?">home</a>
+			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
@@ -1074,7 +1074,7 @@ function render_edit($page)
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
 			<br>
-			<a href="?">home</a>
+			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
@@ -1103,7 +1103,7 @@ function render_history($slug, $changes)
 		</ul>
 
 		<footer class="meta">
-			<a href="?">home</a>
+			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
@@ -1130,7 +1130,7 @@ function render_diff($change)
 		<pre style="background:none"><?=$diff?></pre>
 
 		<footer class="meta">
-			<a href="?">home</a>
+			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
@@ -1153,7 +1153,7 @@ function render_backlinks($slug, $references)
 		</ul>
 
 		<footer class="meta">
-			<a href="?">home</a>
+			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
@@ -1188,7 +1188,7 @@ function render_recent_changes($p, $changes)
 		</p>
 
 		<footer class="meta">
-			<a href="?">home</a>
+			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
@@ -1222,7 +1222,7 @@ function render_recent_changes_from($remote_ip, $p, $changes)
 		</p>
 
 		<footer class="meta">
-			<a href="?">home</a>
+			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
 		</footer>
