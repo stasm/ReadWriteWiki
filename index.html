@@ -46,6 +46,7 @@ window.addEventListener("popstate", (evt) => {
 			frame.scrollIntoView({behavior: "smooth"});
 		} else if (!href) {
 			win.frameElement.remove();
+			i--;
 		} else if (href !== win.location.href) {
 			let frame = createFrame(href);
 			win.frameElement.insertAdjacentElement("beforebegin", frame);
