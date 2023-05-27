@@ -993,9 +993,8 @@ function render_latest($page, $state)
 			last modified on <span title="<?=$page->date_created->format(AS_TIME)?>">
 				<?=$page->date_created->format(AS_DATE)?></span>
 			<a href="?<?=$page->slug?>=diff">diff</a>
-			<a href="?<?=$page->slug?>=edit">edit</a>
 			<br>
-			<a href="?<?=$page->slug?>">html</a>
+			<a href="?<?=$page->slug?>=edit">edit</a>
 			<a href="?<?=$page->slug?>=text">text</a>
 		<?php if ($page->image_hash): ?>
 			<a href="?<?=$page->slug?>=image">image</a>
@@ -1029,9 +1028,8 @@ function render_revision($page)
 			revision <?=$page->id?> from <span title="<?=$page->date_created->format(AS_TIME)?>">
 				<?=$page->date_created->format(AS_DATE)?></span>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=diff">diff</a>
-			<a href="?<?=$page->slug?>[<?=$page->id?>]=edit">restore</a>
 			<br>
-			<a href="?<?=$page->slug?>[<?=$page->id?>]">html</a>
+			<a href="?<?=$page->slug?>[<?=$page->id?>]=edit">restore</a>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=text">text</a>
 		<?php if ($page->image_hash): ?>
 			<a href="?<?=$page->slug?>[<?=$page->id?>]=image">image</a>
@@ -1072,7 +1070,6 @@ function render_edit($page)
 		</form>
 
 		<footer class="meta">
-			<a href="?<?=$page->slug?>">html</a>
 			<a href="?<?=$page->slug?>=text">text</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
 			<a href="?<?=$page->slug?>=history">history</a>
@@ -1106,11 +1103,6 @@ function render_history($slug, $changes)
 		</ul>
 
 		<footer class="meta">
-			<a href="?<?=$slug?>">html</a>
-			<a href="?<?=$slug?>=text">text</a>
-			<a href="?<?=$slug?>=backlinks">backlinks</a>
-			<a href="?<?=$slug?>=history">history</a>
-			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
@@ -1138,11 +1130,6 @@ function render_diff($change)
 		<pre style="background:none"><?=$diff?></pre>
 
 		<footer class="meta">
-			<a href="?<?=$change->slug?>">html</a>
-			<a href="?<?=$change->slug?>=text">text</a>
-			<a href="?<?=$change->slug?>=backlinks">backlinks</a>
-			<a href="?<?=$change->slug?>=history">history</a>
-			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
@@ -1166,11 +1153,6 @@ function render_backlinks($slug, $references)
 		</ul>
 
 		<footer class="meta">
-			<a href="?<?=$slug?>">html</a>
-			<a href="?<?=$slug?>=text">text</a>
-			<a href="?<?=$slug?>=backlinks">backlinks</a>
-			<a href="?<?=$slug?>=history">history</a>
-			<br>
 			<a href="?">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
 			<a href="?<?=RECENT_CHANGES?>">recent</a>
