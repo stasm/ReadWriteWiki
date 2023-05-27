@@ -31,7 +31,7 @@ for (let param of url.searchParams) {
 	}
 	let frame = pushPane(pane_url);
 	document.body.appendChild(frame);
-	frame.scrollIntoView();
+	frame.scrollIntoView({behavior: "smooth"});
 }
 
 window.addEventListener("popstate", (evt) => {
@@ -41,13 +41,13 @@ window.addEventListener("popstate", (evt) => {
 		if (!win) {
 			let frame = createFrame(href);
 			document.body.appendChild(frame);
-			frame.scrollIntoView();
+			frame.scrollIntoView({behavior: "smooth"});
 		} else if (!href) {
 			win.frameElement.remove();
 		} else if (href !== win.location.href) {
 			let frame = createFrame(href);
 			win.frameElement.insertAdjacentElement("beforebegin", frame);
-			frame.scrollIntoView();
+			frame.scrollIntoView({behavior: "smooth"});
 		}
 	}
 });
@@ -75,14 +75,23 @@ function captureLinks(evt) {
 		frame.parentElement.lastElementChild.remove();
 	}
 
+	let state = getState();
+
 	if (win.location.href === evt.target.href) {
+		// It's a link to the same page on which the click happened.
 		if (window.location.search !== win.location.search) {
-			history.pushState(getState(), "", win.location.search);
+			// And the current URL points to another page.
+			history.pushState(state, "", win.location.search);
 		}
+	} else if (state.includes(evt.target.href)) {
+		// There's already a pane with this page.
+		history.pushState(state, "", evt.target.search);
+		let frame = document.querySelector(`iframe[src="${evt.target.href}"]`);
+		frame.scrollIntoView({behavior: "smooth"});
 	} else {
 		let frame = pushPane(evt.target)
 		document.body.appendChild(frame);
-		frame.scrollIntoView();
+		frame.scrollIntoView({behavior: "smooth"});
 	}
 }
 
