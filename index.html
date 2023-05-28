@@ -37,6 +37,7 @@ for (let param of url.searchParams) {
 }
 
 window.addEventListener("popstate", (evt) => {
+	document.title = decodeURI(window.location.search);
 	for (let i = 0; i < Math.max(window.length, evt.state.length); i++) {
 		let href = evt.state[i];
 		let win = window[i];
@@ -85,10 +86,12 @@ function captureLinks(evt) {
 		if (window.location.search !== win.location.search) {
 			// And the current URL points to another page.
 			history.pushState(state, "", win.location.search);
+			document.title = decodeURI(win.location.search);
 		}
 	} else if (state.includes(evt.target.href)) {
 		// There's already a pane with this page.
 		history.pushState(state, "", evt.target.search);
+		document.title = decodeURI(evt.target.search);
 		let frame = document.querySelector(`iframe[src="${evt.target.href}"]`);
 		frame.scrollIntoView({behavior: "smooth"});
 	} else {
@@ -109,7 +112,7 @@ function pushPane(url) {
 	let state = getState();
 	state.push(url.href);
 	history.pushState(state, "", url.search);
-	document.title = url.search;
+	document.title = decodeURI(url.search);
 	return createFrame(url.href);
 }
 </script>
