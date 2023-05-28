@@ -262,7 +262,7 @@ class Revision
 					}
 
 					if ($title = $matches["title"]) {
-						$slug = $title;
+						return "<a $missing href=\"?$slug\">$title</a>";
 					}
 
 					return "<a $missing href=\"?$slug\">$slug</a>";
