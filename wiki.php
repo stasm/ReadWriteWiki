@@ -892,6 +892,7 @@ function render_not_valid($slug, $id = null, $p = null, $ip = null)
 		<h1>Invalid Page Name </h1>
 		<p><?=htmlspecialchars($slug)?> is not a valid page name.</p>
 	<?php endif ?>
+		<hr>
 		<footer class="meta">
 			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
@@ -905,7 +906,7 @@ function render_page_not_found($slug)
 	<article class="meta" style="background:mistyrose">
 		<h1>Page Not Found</h1>
 		<p><?=$slug?> doesn't exist yet. <a href="?<?=$slug?>=edit">Create?</a></p>
-
+		<hr>
 		<footer class="meta">
 			<a href="?<?=$slug?>=backlinks">backlinks</a>
 			<br>
@@ -921,7 +922,7 @@ function render_revision_not_found($slug, $id)
 	<article class="meta" style="background:mistyrose">
 		<h1>Revision Not Found</h1>
 		<p><?=$slug?>[<?=$id?>] doesn't exist.</p>
-
+		<hr>
 		<footer class="meta">
 			<a href="?<?=$slug?>=backlinks">backlinks</a>
 			<a href="?<?=$slug?>=history">history</a>
@@ -944,7 +945,7 @@ function render_image_not_found($slug, $id = null)
 		<h1>Image Not Found</h1>
 		<p><?=$slug?> doesn't have an image. <a href="?<?=$slug?>=edit">Edit?</a></p>
 	<?php endif ?>
-
+		<hr>
 		<footer class="meta">
 			<a href="?<?=$slug?>=backlinks">backlinks</a>
 		<?php if ($id): ?>
@@ -989,6 +990,7 @@ function render_latest($page, $state)
 
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
+		<hr>
 		<footer class="meta">
 			last modified on <span title="<?=$page->date_created->format(AS_TIME)?>">
 				<?=$page->date_created->format(AS_DATE)?></span>
@@ -1024,6 +1026,7 @@ function render_revision($page)
 
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
 
+		<hr>
 		<footer class="meta">
 			revision <?=$page->id?> from <span title="<?=$page->date_created->format(AS_TIME)?>">
 				<?=$page->date_created->format(AS_DATE)?></span>
@@ -1069,6 +1072,7 @@ function render_edit($page)
 			<button type="submit">Save</button>
 		</form>
 
+		<hr>
 		<footer class="meta">
 			<a href="?<?=$page->slug?>=text">text</a>
 			<a href="?<?=$page->slug?>=backlinks">backlinks</a>
@@ -1102,6 +1106,7 @@ function render_history($slug, $changes)
 		<?php endforeach ?>
 		</ul>
 
+		<hr>
 		<footer class="meta">
 			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
@@ -1129,6 +1134,7 @@ function render_diff($change)
 
 		<pre style="background:none"><?=$diff?></pre>
 
+		<hr>
 		<footer class="meta">
 			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
@@ -1152,6 +1158,7 @@ function render_backlinks($slug, $references)
 		<?php endforeach ?>
 		</ul>
 
+		<hr>
 		<footer class="meta">
 			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
@@ -1187,6 +1194,7 @@ function render_recent_changes($p, $changes)
 			<a href="?<?=RECENT_CHANGES?>[<?=$next?>]">next</a>
 		</p>
 
+		<hr>
 		<footer class="meta">
 			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
@@ -1221,6 +1229,7 @@ function render_recent_changes_from($remote_ip, $p, $changes)
 			<a href="?<?=RECENT_CHANGES?>[<?=$next?>]=<?=$remote_ip?>">next</a>
 		</p>
 
+		<hr>
 		<footer class="meta">
 			<a href="?<?=MAIN_PAGE?>">home</a>
 			<a href="?<?=HELP_PAGE?>">help</a>
