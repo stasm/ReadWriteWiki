@@ -253,11 +253,13 @@ class Revision
 					$slug = $matches["slug"];
 					$missing = $state->PageExists($slug) ? '' : 'data-missing';
 
+					$href = "?slug=$slug";
 					if ($action = $matches["action"]) {
 						$slug .= "=$action";
+						$href .= "&action=$action";
 
 						if ($action == 'image') {
-							return "<img src=\"?$slug\" loading=lazy>";
+							return "<img src=\"$href\" loading=lazy>";
 						}
 					}
 
@@ -558,22 +560,16 @@ $state = new State();
 
 switch (strtoupper($_SERVER['REQUEST_METHOD'])) {
 case 'GET':
-	$slug = array_key_first($_GET);
-	if (!$slug) {
-		header('Location: ?' . MAIN_PAGE, true, 303);
+	$slug = filter_input(INPUT_GET, 'slug');
+	$id = filter_input(INPUT_GET, 'id');
+	$action = filter_input(INPUT_GET, 'action');
+
+	if (empty($slug)) {
+		readfile('./wiki.html');
 		exit;
 	}
 
 	$state->title = $slug;
-	$action = $_GET[$slug];
-	if (is_array($action)) {
-		$id = array_key_first($action);
-		$action = $action[$id];
-		$state->title .= $action ? "[$id]=$action" : "[$id]";
-	} else {
-		$id = null;
-		$state->title .= $action ? "=$action" : '';
-	}
 
 	ob_start($state);
 
@@ -985,7 +981,7 @@ function render_latest($page, $state)
 		</h1>
 
 	<?php if ($page->image_hash): ?>
-		<figure><img src="?<?=$page->slug?>=image" width="<?=$page->image_width?>" height="<?=$page->image_height?>"></figure>
+		<figure><img src="?slug=<?=$page->slug?>&action=image" width="<?=$page->image_width?>" height="<?=$page->image_height?>"></figure>
 	<?php endif ?>
 
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
@@ -1021,7 +1017,7 @@ function render_revision($page)
 		</h1>
 
 	<?php if ($page->image_hash): ?>
-		<figure><img src="?<?=$page->slug?>[<?=$page->id?>]=image" width="<?=$page->image_width?>" height="<?=$page->image_height?>"></figure>
+		<figure><img src="?slug=<?=$page->slug?>&id=<?=$page->id?>&action=image" width="<?=$page->image_width?>" height="<?=$page->image_height?>"></figure>
 	<?php endif ?>
 
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
@@ -1063,7 +1059,7 @@ function render_edit($page)
 			<input type="hidden" name="image_hash" value="<?=$page->image_hash?>">
 
 		<?php if ($page->image_hash): ?>
-			<figure><img src="?<?=$page->slug?>[<?=$page->id?>]=image"></figure>
+			<figure><img src="?slug=<?=$page->slug?>&id=<?=$page->id?>&action=image"></figure>
 		<?php endif ?>
 			<input type="file" name="image_data" accept="image/*" onchange="let size_kb = this.files[0].size / 1024; this.nextElementSibling.textContent = new Intl.NumberFormat('en', {style: 'unit', unit: 'kilobyte', maximumFractionDigits: 1}).format(size_kb);"><small></small>
 

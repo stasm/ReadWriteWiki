@@ -1,0 +1,142 @@
+<!doctype html>
+<title>Wikistack</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+	margin: 0;
+	display: inline-flex;
+	align-items: flex-start;
+}
+iframe {
+	display: block;
+	height: 100vh;
+	border: none;
+	box-sizing: border-box;
+	min-width: min(100vw, 500px);
+	max-width: 500px;
+	overflow-y: auto;
+}
+</style>
+<body>
+<script>
+const NICE_SLUG = /\?(?<slug>\w+)(?:\[(?<id>\d+)\])?(?:=(?<action>\w+))?/;
+
+let url = new URL(window.location.href);
+if (!url.search) {
+	url.search = "?HomePage";
+	history.replaceState([real(url).href], "", url.href);
+}
+
+let realPanel = real(url);
+let panelSlug = realPanel.searchParams.get("slug");
+document.title = decodeURI(panelSlug);
+let frame = createFrame(realPanel.href);
+document.body.appendChild(frame);
+frame.scrollIntoView({behavior: "smooth"});
+
+window.addEventListener("popstate", (evt) => {
+	let currentSlug = new URL(location).searchParams.get("slug");
+	document.title = decodeURI(currentSlug);
+	for (let i = 0; i < Math.max(window.length, evt.state.length); i++) {
+		let href = evt.state[i];
+		let win = window[i];
+		if (!win) {
+			let frame = createFrame(href);
+			document.body.appendChild(frame);
+			frame.scrollIntoView({behavior: "smooth"});
+		} else if (!href) {
+			win.frameElement.remove();
+			i--;
+		} else if (href !== win.location.href) {
+			let frame = createFrame(href);
+			win.frameElement.insertAdjacentElement("beforebegin", frame);
+			frame.scrollIntoView({behavior: "smooth"});
+		}
+	}
+});
+
+function real(url) {
+	let copy = new URL(url);
+	copy.search = "";
+
+	let match = NICE_SLUG.exec(url.search);
+	if (match.groups.slug) {
+		copy.searchParams.set("slug", match.groups.slug);
+	}
+	if (match.groups.id) {
+		copy.searchParams.set("id", match.groups.id);
+	}
+	if (match.groups.action) {
+		copy.searchParams.set("action", match.groups.action);
+	}
+
+	return copy;
+}
+
+function captureLinks(evt) {
+console.log(evt.target.host, location.host);
+console.log(evt.target.pathname, location.pathname);
+	if (evt.target.tagName !== "A") {
+		return;
+	}
+	if (evt.target.host !== location.host || evt.target.pathname !== location.pathname) {
+		// Navigate away from the wiki.
+		location = evt.target.href;
+	}
+
+	evt.preventDefault();
+	let win = evt.currentTarget;
+	let frame = win.frameElement;
+
+	// Remove all panes to the right.
+	while (frame.parentElement.lastElementChild !== frame) {
+		frame.parentElement.lastElementChild.remove();
+	}
+
+	let state = getState();
+	let realTarget = real(evt.target);
+	let targetSlug = realTarget.searchParams.get("slug");
+
+	if (realTarget.href === win.location.href) {
+		// It's a link to the same page on which the click happened.
+		if (win.location.search !== real(location).href) {
+			// And the viewport URL points to another page.
+			history.pushState(state, "", evt.target.href);
+			document.title = decodeURI(targetSlug);
+		}
+	} else if (state.includes(realTarget.href)) {
+		// There's already a pane with this page.
+		history.pushState(state, "", evt.target.href);
+		document.title = decodeURI(targetSlug);
+		let frame = document.querySelector(`iframe[src="${realTarget.href}"]`);
+		frame.scrollIntoView({behavior: "smooth"});
+	} else {
+		let state = getState();
+		state.push(realTarget.href);
+		history.pushState(state, "", evt.target.href);
+		document.title = decodeURI(targetSlug);
+		let frame = createFrame(realTarget.href);
+		document.body.appendChild(frame);
+		frame.scrollIntoView({behavior: "smooth"});
+	}
+}
+
+function createFrame(href) {
+	let frame = document.createElement("iframe");
+	frame.src = href;
+	frame.addEventListener("load",
+			() => frame.contentWindow.addEventListener("click", captureLinks, true));
+	return frame;
+}
+
+function getState() {
+	let state = [];
+	for (let i = 0; i < window.length; i++) {
+		let win = window[i];
+		state.push(win.location.href);
+	}
+	return state;
+}
+</script>
+</body>
