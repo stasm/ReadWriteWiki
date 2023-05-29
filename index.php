@@ -5,6 +5,7 @@ defined('MAIN_PAGE') or define('MAIN_PAGE', 'HomePage');
 defined('HELP_PAGE') or define('HELP_PAGE', 'WikiHelp');
 defined('RECENT_CHANGES') or define('RECENT_CHANGES', 'RecentChanges');
 defined('CACHE_MAX_AGE') or define('CACHE_MAX_AGE', 60 * 10);
+defined('USE_MULTICOLUMN') or define('USE_MULTICOLUMN', true);
 
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
@@ -561,16 +562,32 @@ $state = new State();
 
 switch (strtoupper($_SERVER['REQUEST_METHOD'])) {
 case 'GET':
-	$slug = filter_input(INPUT_GET, 'slug');
-	$id = filter_input(INPUT_GET, 'id');
-	$action = filter_input(INPUT_GET, 'action');
-
-	if (empty($slug)) {
-		render_viewer();
-		exit;
+	if (empty($_GET)) {
+		header('Location: ?' . MAIN_PAGE, true, 303);
 	}
 
-	$state->title = $slug;
+	$slug = filter_input(INPUT_GET, 'slug');
+	if (empty($slug)) {
+		if (USE_MULTICOLUMN) {
+			render_viewer();
+			exit;
+		} else {
+			$slug = array_key_first($_GET);
+			$action = $_GET[$slug];
+			if (is_array($action)) {
+				$id = array_key_first($action);
+				$action = $action[$id];
+				$state->title = $slug . ($action ? "[$id]=$action" : "[$id]");
+			} else {
+				$id = null;
+				$state->title = $slug . ($action ? "=$action" : '');
+			}
+		}
+	} else {
+		$state->title = $slug;
+		$id = filter_input(INPUT_GET, 'id');
+		$action = filter_input(INPUT_GET, 'action');
+	}
 
 	ob_start($state);
 
@@ -786,16 +803,10 @@ function render_viewer()
 <script>
 	const NICE_SLUG = /\?(?<slug>[^[=]+)(?:\[(?<id>\d+)\])?(?:=(?<action>.+))?/;
 
-	let url = new URL(window.location.href);
-	if (!url.search) {
-		url.search = "?<?=MAIN_PAGE?>";
-		history.replaceState([real(url).href], "", url.href);
-	}
-
-	let realPanel = real(url);
-	let panelSlug = realPanel.searchParams.get("slug");
-	document.title = decodeURI(panelSlug);
-	let frame = createFrame(realPanel.href);
+	let realEntry = real(location);
+	let entrySlug = realEntry.searchParams.get("slug");
+	document.title = decodeURI(entrySlug);
+	let frame = createFrame(realEntry.href);
 	document.body.appendChild(frame);
 	frame.scrollIntoView({behavior: "smooth"});
 
@@ -862,7 +873,7 @@ function render_viewer()
 
 		if (realTarget.href === win.location.href) {
 			// It's a link to the same page on which the click happened.
-			if (win.location.search !== real(location).href) {
+			if (win.location.search !== real(location).search) {
 				// And the viewport URL points to another page.
 				history.pushState(state, "", evt.target.href);
 				document.title = decodeURI(targetSlug);
