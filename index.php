@@ -783,7 +783,7 @@ function render_viewer()
 </style>
 <body>
 <script>
-	const NICE_SLUG = /\?(?<slug>\w+)(?:\[(?<id>\d+)\])?(?:=(?<action>\w+))?/;
+	const NICE_SLUG = /\?(?<slug>[^[=]+)(?:\[(?<id>\d+)\])?(?:=(?<action>.+))?/;
 
 	let url = new URL(window.location.href);
 	if (!url.search) {
@@ -823,7 +823,7 @@ function render_viewer()
 		let copy = new URL(url);
 		copy.search = "";
 
-		let match = NICE_SLUG.exec(url.search);
+		let match = NICE_SLUG.exec(decodeURI(url.search));
 		if (match.groups.slug) {
 			copy.searchParams.set("slug", match.groups.slug);
 		}
