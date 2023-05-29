@@ -191,7 +191,8 @@ class Revision
 			$line = trim($line);
 
 			if (preg_match(RE_FIGURE_IMAGE, $line, $matches)) {
-				yield "<figure><img src=\"?slug={$matches['slug']}&action=image\" loading=lazy></figure>";
+				$slug = $matches['slug'];
+				yield "<figure><img src=\"?slug=$slug&action=image\" alt=\"$slug\" loading=lazy></figure>";
 				continue;
 			}
 
@@ -253,21 +254,21 @@ class Revision
 					$slug = $matches["slug"];
 					$missing = $state->PageExists($slug) ? '' : 'data-missing';
 
-					$href = "?slug=$slug";
+					$href = "?$slug";
 					if ($action = $matches["action"]) {
-						$slug .= "=$action";
-						$href .= "&action=$action";
-
 						if ($action == 'image') {
-							return "<img src=\"$href\" loading=lazy>";
+							$href = "?slug=$slug&action=image";
+							return "<img src=\"$href\" alt=\"$slug\" loading=lazy>";
+						} else {
+							$href .= "=$action";
 						}
 					}
 
 					if ($title = $matches["title"]) {
-						return "<a $missing href=\"?$slug\">$title</a>";
+						return "<a $missing href=\"$href\">$title</a>";
 					}
 
-					return "<a $missing href=\"?$slug\">$slug</a>";
+					return "<a $missing href=\"$href\">$slug</a>";
 				},
 				$text,
 				-1, $count, PREG_UNMATCHED_AS_NULL);
@@ -411,12 +412,12 @@ function view_image_at_revision($state, $slug, $id)
 function view_edit($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare($id ? '
-		SELECT id, slug, body, time_created, image_hash
-		FROM revisions
+		SELECT id, slug, body, revisions.time_created, image_hash, image_width, image_height
+		FROM revisions LEFT JOIN images ON image_hash = hash
 		WHERE slug = ? AND id = ?
 	;' : '
-		SELECT id, slug, body, time_created, image_hash
-		FROM latest
+		SELECT id, slug, body, latest.time_created, image_hash, image_width, image_height
+		FROM latest LEFT JOIN images ON image_hash = hash
 		WHERE slug = ?
 	;');
 
@@ -1203,7 +1204,7 @@ function render_edit($page)
 			<input type="hidden" name="image_hash" value="<?=$page->image_hash?>">
 
 		<?php if ($page->image_hash): ?>
-			<figure><img src="?slug=<?=$page->slug?>&id=<?=$page->id?>&action=image"></figure>
+			<figure><img src="?slug=<?=$page->slug?>&id=<?=$page->id?>&action=image" width="<?=$page->image_width?>" height="<?=$page->image_height?>"></figure>
 		<?php endif ?>
 			<input type="file" name="image_data" accept="image/*" onchange="let size_kb = this.files[0].size / 1024; this.nextElementSibling.textContent = new Intl.NumberFormat('en', {style: 'unit', unit: 'kilobyte', maximumFractionDigits: 1}).format(size_kb);"><small></small>
 
