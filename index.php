@@ -13,7 +13,7 @@ const RE_HASH_SHA1 = '/^[[:xdigit:]]{40}$/';
 const RE_PAGE_SLUG = '/\b(?<slug>\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+)\b/u';
 const RE_PAGE_LINK = '/(?:\[(?<title>.+?)\])?\b(?<slug>\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+)(?:=(?<action>[a-z]+)\b)?/u';
 const RE_HREF_LINK = '@(?:\[([^][]+)\])?([a-z]+://(\((?3)*\)|[^\s()<>]*[^\s().,;:?!<>{}*"\'])+)@ui';
-const RE_FIGURE_IMAGE = '/^\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+=image$/u';
+const RE_FIGURE_IMAGE = '/^(?<slug>\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+)=image$/u';
 const RE_FIGURE_LINK = '@^[a-z]+://[^\s]+$@ui';
 const RE_WORD_BOUNDARY = '/((?<=\p{Ll}|\d)(?=\p{Lu})|(?<=\p{Ll})(?=\d))/u';
 
@@ -190,8 +190,8 @@ class Revision
 
 			$line = trim($line);
 
-			if (preg_match(RE_FIGURE_IMAGE, $line)) {
-				yield "<figure><img src=\"?$line\" loading=lazy></figure>";
+			if (preg_match(RE_FIGURE_IMAGE, $line, $matches)) {
+				yield "<figure><img src=\"?slug={$matches['slug']}&action=image\" loading=lazy></figure>";
 				continue;
 			}
 
