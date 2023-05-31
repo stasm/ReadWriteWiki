@@ -506,7 +506,7 @@ function view_backlinks($state, $slug, $id)
 function view_recent_changes($state, $p = 0)
 {
 	if ($p > 0) {
-		render_not_valid(RECENT_CHANGES, null, $p);
+		render_invalid_offset(RECENT_CHANGES, $p);
 		return;
 	}
 
@@ -530,7 +530,7 @@ function view_recent_changes($state, $p = 0)
 function view_recent_changes_from($state, $remote_ip, $p = 0)
 {
 	if ($p > 0) {
-		render_not_valid(RECENT_CHANGES, null, $p);
+		render_invalid_offset(RECENT_CHANGES, $p);
 		return;
 	}
 
@@ -592,12 +592,12 @@ case 'GET':
 	ob_start($state);
 
 	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_SLUG]])) {
-		render_not_valid($slug);
+		render_invalid_slug($slug);
 		exit;
 	}
 
 	if ($id && !filter_var($id, FILTER_VALIDATE_INT)) {
-		render_not_valid($slug, $id);
+		render_invalid_revision($slug, $id);
 		exit;
 	}
 
@@ -609,7 +609,7 @@ case 'GET':
 		} elseif (filter_var($remote_ip, FILTER_VALIDATE_IP)) {
 			view_recent_changes_from($state, $remote_ip, $id);
 		} else {
-			render_not_valid($slug, null, null, $remote_ip);
+			render_invalid_address($slug, $remote_ip);
 		}
 		return;
 	}
@@ -645,6 +645,8 @@ case 'GET':
 			view_image_latest($state, $slug);
 		}
 		break;
+	default:
+		render_invalid_action($slug, $action);
 	}
 
 	ob_end_flush();
@@ -801,7 +803,7 @@ function render_viewer()
 </style>
 <body>
 <script>
-	const NICE_SLUG = /\?(?<slug>[^[=]+)(?:\[(?<id>\d+)\])?(?:=(?<action>.+))?/;
+	const NICE_SLUG = /\?(?<slug>[^[=]+)(?:\[(?<id>.*?)\])?(?:=(?<action>.+))?/;
 
 	let realEntry = real(location);
 	let entrySlug = realEntry.searchParams.get("slug");
@@ -1028,22 +1030,67 @@ $buffer
 EOF;
 }
 
-function render_not_valid($slug, $id = null, $p = null, $ip = null)
+function render_invalid_slug($slug)
 { ?>
 	<article class="meta" style="background:mistyrose">
-	<?php if ($id !== null): ?>
-		<h1>Invalid Revision</h1>
-		<p><?=htmlspecialchars($slug)?>[<?=htmlspecialchars($id)?>] is not a valid revision.</p>
-	<?php elseif ($p !== null): ?>
-		<h1>Invalid Range</h1>
-		<p><?=htmlspecialchars($slug)?>[<?=htmlspecialchars($p)?>] is not a valid range offset.</p>
-	<?php elseif ($ip !== null): ?>
-		<h1>Invalid Address</h1>
-		<p><?=htmlspecialchars($ip)?> is not a valid IP address.</p>
-	<?php else: ?>
 		<h1>Invalid Page Name </h1>
 		<p><?=htmlspecialchars($slug)?> is not a valid page name.</p>
-	<?php endif ?>
+		<hr>
+		<footer class="meta">
+			<a href="?<?=MAIN_PAGE?>">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
+		</footer>
+	</article>
+<?php }
+
+function render_invalid_revision($slug, $id)
+{ ?>
+	<article class="meta" style="background:mistyrose">
+		<h1>Invalid Revision</h1>
+		<p><?=htmlspecialchars($slug)?>[<?=htmlspecialchars($id)?>] is not a valid revision.</p>
+		<hr>
+		<footer class="meta">
+			<a href="?<?=MAIN_PAGE?>">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
+		</footer>
+	</article>
+<?php }
+
+function render_invalid_action($slug, $action)
+{ ?>
+	<article class="meta" style="background:mistyrose">
+		<h1>Invalid Action</h1>
+		<p><?=htmlspecialchars($action)?> is not a valid action name.</p>
+		<hr>
+		<footer class="meta">
+			<a href="?<?=MAIN_PAGE?>">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
+		</footer>
+	</article>
+<?php }
+
+function render_invalid_offset($slug, $p)
+{ ?>
+	<article class="meta" style="background:mistyrose">
+		<h1>Invalid Range</h1>
+		<p><?=htmlspecialchars($slug)?>[<?=htmlspecialchars($p)?>] is not a valid range offset.</p>
+		<hr>
+		<footer class="meta">
+			<a href="?<?=MAIN_PAGE?>">home</a>
+			<a href="?<?=HELP_PAGE?>">help</a>
+			<a href="?<?=RECENT_CHANGES?>">recent</a>
+		</footer>
+	</article>
+<?php }
+
+function render_invalid_address($slug, $ip = null)
+{ ?>
+	<article class="meta" style="background:mistyrose">
+		<h1>Invalid Address</h1>
+		<p><?=htmlspecialchars($ip)?> is not a valid IP address.</p>
 		<hr>
 		<footer class="meta">
 			<a href="?<?=MAIN_PAGE?>">home</a>
