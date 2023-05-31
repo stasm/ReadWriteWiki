@@ -18,7 +18,6 @@ const RE_FIGURE_IMAGE = '/^(?<slug>\p{Lu}\p{Ll}+(?:\p{Lu}\p{Ll}+|\d+)+)=image$/u
 const RE_FIGURE_LINK = '@^[a-z]+://[^\s]+$@ui';
 const RE_WORD_BOUNDARY = '/((?<=\p{Ll}|\d)(?=\p{Lu})|(?<=\p{Ll})(?=\d))/u';
 
-
 class State
 {
 	public $pdo;
@@ -85,6 +84,40 @@ class Change
 		$this->date_created = DateTime::createFromFormat('U', $this->time_created);
 		$this->delta = $this->size - $this->prev_size;
 		$this->remote_ip = inet_ntop($this->remote_addr);
+
+	}
+
+	public function DiffToHtml()
+	{
+		$diff = diff(
+				preg_split('/(\s+)/', htmlspecialchars($this->prev_body), -1, PREG_SPLIT_DELIM_CAPTURE),
+				preg_split('/(\s+)/', htmlspecialchars($this->body), -1, PREG_SPLIT_DELIM_CAPTURE));
+		$ret = '';
+		foreach ($diff as $k) {
+			if (is_array($k)) {
+				$ret .= (!empty($k['d'])?"<del>".implode($k['d'])."</del>":'').
+					(!empty($k['i'])?"<ins>".implode($k['i'])."</ins>":'');
+			} else {
+				$ret .= $k;
+			}
+		}
+		return $ret;
+	}
+
+	public function LineStats()
+	{
+		$diff = diff(
+				preg_split('/\n/', $this->prev_body, -1, 0),
+				preg_split('/\n/', $this->body, -1, 0));
+		$d = -0;
+		$i = 0;
+		foreach ($diff as $k) {
+			if (is_array($k)) {
+				$d += count($k['d']);
+				$i += count($k['i']);
+			}
+		}
+		return [-ceil($d / 2), ceil($i / 2)];
 	}
 }
 
@@ -442,9 +475,10 @@ function view_history($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare('
 		SELECT
-			id, time_created, remote_addr, size,
+			slug, id, time_created, remote_addr, size, body,
 			LEAD(id, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_id,
-			LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size
+			LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size,
+			LEAD(body, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_body
 		FROM changelog
 		WHERE slug = ?' . ($id ? ' AND id <= ?' : '') . '
 		ORDER BY id DESC
@@ -513,9 +547,10 @@ function view_recent_changes($state, $p = 0)
 	$limit = 25;
 	$statement = $state->pdo->prepare('
 		SELECT
-			id, slug, time_created, remote_addr, size,
+			slug, id, time_created, remote_addr, size, body,
 			LEAD(id, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_id,
-			LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size
+			LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size,
+			LEAD(body, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_body
 		FROM changelog
 		ORDER BY id DESC
 		LIMIT ? OFFSET ?
@@ -852,12 +887,19 @@ function render_viewer()
 	}
 
 	function captureLinks(evt) {
-		if (evt.target.tagName !== "A") {
-			return;
+		let a = evt.target;
+		while (a.tagName !== "A") {
+			if (a.parentElement) {
+				// The click might have happened on a child of an A (e.g. strong).
+				a = a.parentElement;
+			} else {
+				// It's not an A click.
+				return;
+			}
 		}
-		if (evt.target.host !== location.host || evt.target.pathname !== location.pathname) {
+		if (a.host !== location.host || a.pathname !== location.pathname) {
 			// Navigate away from the wiki.
-			location = evt.target.href;
+			location = a.href;
 		}
 
 		evt.preventDefault();
@@ -870,26 +912,26 @@ function render_viewer()
 		}
 
 		let state = getState();
-		let realTarget = real(evt.target);
+		let realTarget = real(a);
 		let targetSlug = realTarget.searchParams.get("slug");
 
 		if (realTarget.href === win.location.href) {
 			// It's a link to the same page on which the click happened.
 			if (win.location.search !== real(location).search) {
 				// And the viewport URL points to another page.
-				history.pushState(state, "", evt.target.href);
+				history.pushState(state, "", a.href);
 				document.title = decodeURI(targetSlug);
 			}
 		} else if (state.includes(realTarget.href)) {
 			// There's already a pane with this page.
-			history.pushState(state, "", evt.target.href);
+			history.pushState(state, "", a.href);
 			document.title = decodeURI(targetSlug);
 			let frame = document.querySelector(`iframe[src="${realTarget.href}"]`);
 			frame.scrollIntoView({behavior: "smooth"});
 		} else {
 			let state = getState();
 			state.push(realTarget.href);
-			history.pushState(state, "", evt.target.href);
+			history.pushState(state, "", a.href);
 			document.title = decodeURI(targetSlug);
 			let frame = createFrame(realTarget.href);
 			document.body.appendChild(frame);
@@ -1292,12 +1334,14 @@ function render_history($slug, $changes)
 		</h1>
 
 		<ul>
-		<?php foreach ($changes as $change): ?>
+		<?php foreach ($changes as $change):
+			[$del, $ins] = $change->LineStats();
+		?>
 			<li>
 				<a href="?<?=$slug?>[<?=$change->id?>]">
 					[<?=$change->id?>]
 				</a>
-				<small>(<a href="?<?=$slug?>[<?=$change->id?>]=diff"><?=sprintf("%+d", $change->delta)?>b</a>)</small>
+				<small>(<a href="?<?=$slug?>[<?=$change->id?>]=diff"><del><?=$del === 0 ? '-0' : sprintf("%+d", $del)?></del> <ins><?=sprintf("%+d", $ins)?></ins></a>)</small>
 				on <?=$change->date_created->format(AS_DATE)?>
 				at <?=$change->date_created->format(AS_TIME)?>
 				from <a href="?<?=RECENT_CHANGES?>=<?=$change->remote_ip?>"><?=$change->remote_ip?></a>
@@ -1315,11 +1359,7 @@ function render_history($slug, $changes)
 <?php }
 
 function render_diff($change)
-{
-	$old = htmlspecialchars($change->prev_body ?: '');
-	$new = htmlspecialchars($change->body);
-	$diff = htmlDiff($old, $new);
-?>
+{ ?>
 	<article style="background:aliceblue">
 		<h1 class="meta">
 			Diff for <a href="?<?=$change->slug?>"><?=$change->slug?></a>
@@ -1331,7 +1371,7 @@ function render_diff($change)
 			</small>
 		</h1>
 
-		<pre style="background:none"><?=$diff?></pre>
+		<pre style="background:none"><?=$change->DiffToHtml()?></pre>
 
 		<hr>
 		<footer class="meta">
@@ -1376,12 +1416,14 @@ function render_recent_changes($p, $changes)
 		</h1>
 
 		<ul>
-		<?php foreach ($changes as $change): ?>
+		<?php foreach ($changes as $change):
+			[$del, $ins] = $change->LineStats();
+		?>
 			<li>
 				<a href="?<?=$change->slug?>[<?=$change->id?>]">
 					<?=$change->slug?>[<?=$change->id?>]
 				</a>
-				<small>(<a href="?<?=$change->slug?>[<?=$change->id?>]=diff"><?=sprintf("%+d", $change->delta)?>b</a>)</small>
+				<small>(<a href="?<?=$change->slug?>[<?=$change->id?>]=diff"><del><?=$del === 0 ? '-0' : sprintf("%+d", $del)?></del> <ins><?=sprintf("%+d", $ins)?></ins></a>)</small>
 				on <?=$change->date_created->format(AS_DATE)?>
 				at <?=$change->date_created->format(AS_TIME)?>
 				from <a href="?<?=RECENT_CHANGES?>=<?=$change->remote_ip?>"><?=$change->remote_ip?></a>
@@ -1412,12 +1454,14 @@ function render_recent_changes_from($remote_ip, $p, $changes)
 		</h1>
 
 		<ul>
-		<?php foreach ($changes as $change): ?>
+		<?php foreach ($changes as $change):
+			[$del, $ins] = $change->LineStats();
+		?>
 			<li>
 				<a href="?<?=$change->slug?>[<?=$change->id?>]">
 					<?=$change->slug?>[<?=$change->id?>]
 				</a>
-				<small>(<a href="?<?=$change->slug?>[<?=$change->id?>]=diff"><?=sprintf("%+d", $change->delta)?>b</a>)</small>
+				<small>(<a href="?<?=$change->slug?>[<?=$change->id?>]=diff"><del><?=$del === 0 ? '-0' : sprintf("%+d", $del)?></del> <ins><?=sprintf("%+d", $ins)?></ins></a>)</small>
 				on <?=$change->date_created->format(AS_DATE)?>
 				at <?=$change->date_created->format(AS_TIME)?>
 			</li>
@@ -1464,20 +1508,4 @@ function diff($old, $new){
 			diff(array_slice($old, 0, $omax), array_slice($new, 0, $nmax)),
 			array_slice($new, $nmax, $maxlen),
 			diff(array_slice($old, $omax + $maxlen), array_slice($new, $nmax + $maxlen)));
-}
-
-function htmlDiff($old, $new){
-	$ret = '';
-	$old = preg_split('/(\s+)/', $old, -1, PREG_SPLIT_DELIM_CAPTURE);
-	$new = preg_split('/(\s+)/', $new, -1, PREG_SPLIT_DELIM_CAPTURE);
-	$diff = diff($old, $new);
-	foreach ($diff as $k) {
-		if (is_array($k)) {
-			$ret .= (!empty($k['d'])?"<del>".implode($k['d'])."</del>":'').
-				(!empty($k['i'])?"<ins>".implode($k['i'])."</ins>":'');
-		} else {
-			$ret .= $k;
-		}
-	}
-	return $ret;
 }
