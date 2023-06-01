@@ -236,7 +236,7 @@ class Revision
 			}
 
 			if (preg_match(RE_FIGURE_LINK, $line)) {
-				yield "<figure><a href=\"$line\">$line</a></figure>";
+				yield "<figure><a href=\"$line\" target=_parent>$line</a></figure>";
 				continue;
 			}
 
@@ -267,9 +267,9 @@ class Revision
 			$link_text = next($parts);
 			$link_href = next($parts);
 			if ($link_text) {
-				$result .= "<a href=\"$link_href\">$link_text</a>";
+				$result .= "<a href=\"$link_href\" target=_parent>$link_text</a>";
 			} elseif ($link_href) {
-				$result .= "<a href=\"$link_href\">$link_href</a>";
+				$result .= "<a href=\"$link_href\" target=_parent>$link_href</a>";
 			}
 
 			// Pop the balanced parens capture group/subroutine.
@@ -842,13 +842,14 @@ function render_viewer()
 
 	let realEntry = real(location);
 	let entrySlug = realEntry.searchParams.get("slug");
+	history.replaceState([realEntry.href], "", location.href);
 	document.title = decodeURI(entrySlug);
 	let frame = createFrame(realEntry.href);
 	document.body.appendChild(frame);
 	frame.scrollIntoView({behavior: "smooth"});
 
 	window.addEventListener("popstate", (evt) => {
-		let currentSlug = new URL(location).searchParams.get("slug");
+		let currentSlug = real(location).searchParams.get("slug");
 		document.title = decodeURI(currentSlug);
 		for (let i = 0; i < Math.max(window.length, evt.state.length); i++) {
 			let href = evt.state[i];
@@ -868,6 +869,7 @@ function render_viewer()
 		}
 	});
 
+	// Convert a nice URL (?PageSlug[id]=action) to a real URL (?slug=PageSlug&…).
 	function real(url) {
 		let copy = new URL(url);
 		copy.search = "";
@@ -887,23 +889,10 @@ function render_viewer()
 	}
 
 	function captureLinks(evt) {
-		let a = evt.target;
-		while (a.tagName !== "A") {
-			if (a.parentElement) {
-				// The click might have happened on a child of an A (e.g. strong).
-				a = a.parentElement;
-			} else {
-				// It's not an A click.
-				return;
-			}
-		}
-		if (a.host !== location.host || a.pathname !== location.pathname) {
-			// Navigate away from the wiki.
-			location = a.href;
-		}
-
 		evt.preventDefault();
-		let win = evt.currentTarget;
+
+		let a = evt.currentTarget;
+		let win = a.ownerDocument.defaultView;
 		let frame = win.frameElement;
 
 		// Remove all panes to the right.
@@ -942,8 +931,11 @@ function render_viewer()
 	function createFrame(href) {
 		let frame = document.createElement("iframe");
 		frame.src = href;
-		frame.addEventListener("load",
-				() => frame.contentWindow.addEventListener("click", captureLinks, true));
+		frame.addEventListener("load", () => {
+			for (let a of frame.contentWindow.document.querySelectorAll("a[href^='?']")) {
+				a.addEventListener("click", captureLinks);
+			}
+		});
 		return frame;
 	}
 
