@@ -842,32 +842,47 @@ function render_viewer()
 
 	let realEntry = real(location);
 	let entrySlug = realEntry.searchParams.get("slug");
-	history.replaceState([realEntry.href], "", location.href);
 	document.title = decodeURI(entrySlug);
-	let frame = createFrame(realEntry.href);
-	document.body.appendChild(frame);
-	frame.scrollIntoView({behavior: "smooth"});
+
+	if (history.state) {
+		setTimeout(() => syncState(history.state));
+	} else {
+		history.replaceState([realEntry.href], "", location.href);
+		let frame = createFrame(realEntry.href);
+		document.body.appendChild(frame);
+		frame.scrollIntoView({behavior: "smooth"});
+	}
 
 	window.addEventListener("popstate", (evt) => {
 		let currentSlug = real(location).searchParams.get("slug");
 		document.title = decodeURI(currentSlug);
-		for (let i = 0; i < Math.max(window.length, evt.state.length); i++) {
-			let href = evt.state[i];
-			let win = window[i];
-			if (!win) {
+		syncState(evt.state);
+	});
+
+	function syncState(state) {
+		let frames = [...document.querySelectorAll("iframe")];
+		for (let i = 0; i < Math.max(frames.length, state.length); i++) {
+			let href = state[i];
+			if (!frames[i]) {
+				// No more existing frames; create new ones to reflect the state.
 				let frame = createFrame(href);
 				document.body.appendChild(frame);
 				frame.scrollIntoView({behavior: "smooth"});
 			} else if (!href) {
-				win.frameElement.remove();
-				i--;
-			} else if (href !== win.location.href) {
+				// No more hrefs in the state; remove trailing frames.
+				frames[i].remove();
+			} else if (href !== frames[i].src) {
+				// Href-frame mismatch under index i.
 				let frame = createFrame(href);
-				win.frameElement.insertAdjacentElement("beforebegin", frame);
+				frames[i].insertAdjacentElement("beforebegin", frame);
 				frame.scrollIntoView({behavior: "smooth"});
+				// Update the list of currently open frames.
+				frames = [...document.querySelectorAll("iframe")];
+			} else {
+				// Href and frame match; all good;
 			}
 		}
-	});
+	}
 
 	// Convert a nice URL (?PageSlug[id]=action) to a real URL (?slug=PageSlug&…).
 	function real(url) {
@@ -896,8 +911,8 @@ function render_viewer()
 		let frame = win.frameElement;
 
 		// Remove all panes to the right.
-		while (frame.parentElement.lastElementChild !== frame) {
-			frame.parentElement.lastElementChild.remove();
+		while (frame.nextElementSibling) {
+			frame.nextElementSibling.remove();
 		}
 
 		let state = getState();
@@ -941,9 +956,8 @@ function render_viewer()
 
 	function getState() {
 		let state = [];
-		for (let i = 0; i < window.length; i++) {
-			let win = window[i];
-			state.push(win.location.href);
+		for (let frame of document.querySelectorAll("iframe")) {
+			state.push(frame.src);
 		}
 		return state;
 	}
