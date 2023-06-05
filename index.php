@@ -921,8 +921,14 @@ function render_viewer()
 
 		if (realTarget.href === win.location.href) {
 			// It's a link to the same page on which the click happened.
-			if (win.location.search !== real(location).search) {
-				// And the viewport URL points to another page.
+			if (win.location.search === real(location).search) {
+				// The viewport URL already points to it; remove all other frames.
+				history.pushState([realTarget.href], "", a.href);
+				while (frame.previousElementSibling) {
+					frame.previousElementSibling.remove();
+				}
+			} else {
+				// The viewport URL points to another page; update the viewport URL.
 				history.pushState(state, "", a.href);
 				document.title = decodeURI(targetSlug);
 			}
