@@ -321,6 +321,229 @@ function starts_with($string, $prefix) {
 	return substr($string, 0, strlen($prefix)) == $prefix;
 }
 
+session_cache_limiter('none');
+session_start();
+$state = new State();
+
+switch (strtoupper($_SERVER['REQUEST_METHOD'])) {
+case 'GET':
+	if (empty($_GET)) {
+		header('Location: ?' . MAIN_PAGE, true, 303);
+	}
+
+	$slug = filter_input(INPUT_GET, 'slug');
+	if (empty($slug)) {
+		if (USE_MULTICOLUMN) {
+			render_viewer();
+			exit;
+		} else {
+			$slug = array_key_first($_GET);
+			$action = $_GET[$slug];
+			if (is_array($action)) {
+				$id = array_key_first($action);
+				$action = $action[$id];
+				$state->title = $slug . ($action ? "[$id]=$action" : "[$id]");
+			} else {
+				$id = null;
+				$state->title = $slug . ($action ? "=$action" : '');
+			}
+		}
+	} else {
+		$state->title = $slug;
+		$id = filter_input(INPUT_GET, 'id');
+		$action = filter_input(INPUT_GET, 'action');
+	}
+
+	ob_start($state);
+
+	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_SLUG]])) {
+		render_invalid_slug($slug);
+		exit;
+	}
+
+	if ($id && !filter_var($id, FILTER_VALIDATE_INT)) {
+		render_invalid_revision($slug, $id);
+		exit;
+	}
+
+	switch ($slug) {
+	case RECENT_CHANGES:
+		$remote_ip = $action;
+		if ($remote_ip == null) {
+			view_recent_changes($state, $id);
+		} elseif (filter_var($remote_ip, FILTER_VALIDATE_IP)) {
+			view_recent_changes_from($state, $remote_ip, $id);
+		} else {
+			render_invalid_address($slug, $remote_ip);
+		}
+		return;
+	}
+
+	switch ($action) {
+	case 'diff':
+		view_diff_at_revision($state, $slug, $id);
+		break;
+	case 'edit':
+		view_edit($state, $slug, $id);
+		break;
+	case 'history':
+		view_history($state, $slug, $id);
+		break;
+	case 'backlinks':
+		view_backlinks($state, $slug, $id);
+		break;
+	case 'text':
+		$state->render_mode = 'text';
+	case 'html':
+	case '':
+		if ($id) {
+			view_page_at_revision($state, $slug, $id);
+		} else {
+			view_page_latest($state, $slug);
+		}
+		break;
+	case 'image':
+		$state->render_mode = 'image';
+		if ($id) {
+			view_image_at_revision($state, $slug, $id);
+		} else {
+			view_image_latest($state, $slug);
+		}
+		break;
+	default:
+		render_invalid_action($slug, $action);
+	}
+
+	ob_end_flush();
+	break;
+case 'POST':
+	$honeypot = filter_input(INPUT_POST, 'user');
+	if ($honeypot) {
+		header($_SERVER['SERVER_PROTOCOL'] . ' 405 Method Not Allowed', true, 405);
+		exit();
+	}
+
+	$body = filter_input(INPUT_POST, 'body');
+	$time = date('U');
+	$addr = inet_pton($_SERVER['REMOTE_ADDR']);
+	$slug = filter_input(INPUT_POST, 'slug');
+	$image_hash = filter_input(INPUT_POST, 'image_hash');
+
+	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_SLUG]])) {
+		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+		exit('Invalid page slug; must be CamelCase123.');
+	}
+
+	$state->pdo->beginTransaction();
+
+	$image_file = $_FILES['image_data'];
+	if (file_exists($image_file['tmp_name']) && is_uploaded_file($image_file['tmp_name'])) {
+		if ($image_file['error'] > UPLOAD_ERR_OK) {
+			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+			exit('File too big; must be less than 100KB.');
+		}
+
+		$image_file_type = mime_content_type($image_file['tmp_name']);
+		if (extension_loaded('gd')) {
+			switch ($image_file_type) {
+			case 'image/jpeg':
+				$image = imagecreatefromjpeg($image_file['tmp_name']);
+				break;
+			case 'image/png':
+				$image = imagecreatefrompng($image_file['tmp_name']);
+				imagepalettetotruecolor($image);
+				imagealphablending($image, true);
+				imagesavealpha($image, true);
+				break;
+			case 'image/webp':
+				$image = imagecreatefromwebp($image_file['tmp_name']);
+				break;
+			default:
+				header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+				exit('Only JPG, PNG, WEBP are accepted.');
+			}
+
+			$image_width = imagesx($image);
+			if ($image_width > 470) {
+				$image = imagescale($image, 470);
+				$image_width = imagesx($image);
+			}
+			$image_height = imagesy($image);
+
+			if ($image_file_type != 'image/webp') {
+				$image_file_type = 'image/webp';
+				$image_temp_name = $image_file['tmp_name'] . '.webp';
+				imagewebp($image, $image_temp_name, 84);
+			} else {
+				$image_temp_name = $image_file['tmp_name'];
+			}
+
+			$image_file_size = filesize($image_temp_name);
+		} elseif (starts_with($image_file_type, 'image/')) {
+			$image_temp_name = $image_file['tmp_name'];
+			$image_file_size = $image_file['size'];
+		} else {
+			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+			exit('File is not an image; MIME type must be image/*.');
+		}
+
+		if ($image_file_size > 100000) {
+			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+			exit('File too big; must be less than 100KB.');
+		}
+
+		$statement = $state->pdo->prepare('
+			INSERT OR IGNORE INTO images (hash, page_slug, content_type, time_created, remote_addr, image_data, image_width, image_height, file_size, file_name)
+			VALUES (:hash, :page_slug, :content_type, :time_created, :remote_addr, :image_data, :image_width, :image_height, :file_size, :file_name)
+		;');
+
+		$image_hash = sha1_file($image_temp_name);
+		$file = fopen($image_temp_name, 'rb');
+
+		$statement->bindParam('hash', $image_hash, PDO::PARAM_STR);
+		$statement->bindParam('page_slug', $slug, PDO::PARAM_STR);
+		$statement->bindParam('content_type', $image_file_type, PDO::PARAM_STR);
+		$statement->bindParam('time_created', $time, PDO::PARAM_INT);
+		$statement->bindParam('remote_addr', $addr, PDO::PARAM_STR);
+		$statement->bindParam('image_data', $file, PDO::PARAM_LOB);
+		$statement->bindParam('image_width', $image_width, PDO::PARAM_INT);
+		$statement->bindParam('image_height', $image_height, PDO::PARAM_INT);
+		$statement->bindParam('file_size', $image_file_size, PDO::PARAM_INT);
+		$statement->bindParam('file_name', $image_file['name'], PDO::PARAM_STR);
+
+		if (!$statement->execute()) {
+			exit('Unable to upload the image.');
+		}
+	} elseif (empty($image_hash)) {
+		$image_hash = null;
+	} elseif (!filter_var($image_hash, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_HASH_SHA1]])) {
+		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+		exit('Invalid image_hash; must be SHA1 or empty.');
+	}
+
+	$statement = $state->pdo->prepare('
+		INSERT INTO revisions (slug, body, time_created, remote_addr, image_hash)
+		VALUES (:slug, :body, :time, :addr, :image_hash)
+	;');
+
+	$statement->bindParam('slug', $slug, PDO::PARAM_STR);
+	$statement->bindParam('body', $body, PDO::PARAM_STR);
+	$statement->bindParam('time', $time, PDO::PARAM_INT);
+	$statement->bindParam('addr', $addr, PDO::PARAM_STR);
+	$statement->bindParam('image_hash', $image_hash, PDO::PARAM_STR);
+
+	if ($statement->execute()) {
+		$state->pdo->commit();
+		$_SESSION['revision_created'] = true;
+		header("Location: ?$slug", true, 303);
+		exit;
+	}
+
+	exit("Unable to create a new revision of $slug.");
+}
+
+// Views.
+
 function view_page_latest($state, $slug)
 {
 	$statement = $state->pdo->prepare('
@@ -591,228 +814,7 @@ function view_recent_changes_from($state, $remote_ip, $p = 0)
 	render_recent_changes_from($remote_ip, $p, $changes);
 }
 
-session_cache_limiter('none');
-session_start();
-$state = new State();
-
-switch (strtoupper($_SERVER['REQUEST_METHOD'])) {
-case 'GET':
-	if (empty($_GET)) {
-		header('Location: ?' . MAIN_PAGE, true, 303);
-	}
-
-	$slug = filter_input(INPUT_GET, 'slug');
-	if (empty($slug)) {
-		if (USE_MULTICOLUMN) {
-			render_viewer();
-			exit;
-		} else {
-			$slug = array_key_first($_GET);
-			$action = $_GET[$slug];
-			if (is_array($action)) {
-				$id = array_key_first($action);
-				$action = $action[$id];
-				$state->title = $slug . ($action ? "[$id]=$action" : "[$id]");
-			} else {
-				$id = null;
-				$state->title = $slug . ($action ? "=$action" : '');
-			}
-		}
-	} else {
-		$state->title = $slug;
-		$id = filter_input(INPUT_GET, 'id');
-		$action = filter_input(INPUT_GET, 'action');
-	}
-
-	ob_start($state);
-
-	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_SLUG]])) {
-		render_invalid_slug($slug);
-		exit;
-	}
-
-	if ($id && !filter_var($id, FILTER_VALIDATE_INT)) {
-		render_invalid_revision($slug, $id);
-		exit;
-	}
-
-	switch ($slug) {
-	case RECENT_CHANGES:
-		$remote_ip = $action;
-		if ($remote_ip == null) {
-			view_recent_changes($state, $id);
-		} elseif (filter_var($remote_ip, FILTER_VALIDATE_IP)) {
-			view_recent_changes_from($state, $remote_ip, $id);
-		} else {
-			render_invalid_address($slug, $remote_ip);
-		}
-		return;
-	}
-
-	switch ($action) {
-	case 'diff':
-		view_diff_at_revision($state, $slug, $id);
-		break;
-	case 'edit':
-		view_edit($state, $slug, $id);
-		break;
-	case 'history':
-		view_history($state, $slug, $id);
-		break;
-	case 'backlinks':
-		view_backlinks($state, $slug, $id);
-		break;
-	case 'text':
-		$state->render_mode = 'text';
-	case 'html':
-	case '':
-		if ($id) {
-			view_page_at_revision($state, $slug, $id);
-		} else {
-			view_page_latest($state, $slug);
-		}
-		break;
-	case 'image':
-		$state->render_mode = 'image';
-		if ($id) {
-			view_image_at_revision($state, $slug, $id);
-		} else {
-			view_image_latest($state, $slug);
-		}
-		break;
-	default:
-		render_invalid_action($slug, $action);
-	}
-
-	ob_end_flush();
-	break;
-case 'POST':
-	$honeypot = filter_input(INPUT_POST, 'user');
-	if ($honeypot) {
-		header($_SERVER['SERVER_PROTOCOL'] . ' 405 Method Not Allowed', true, 405);
-		exit();
-	}
-
-	$body = filter_input(INPUT_POST, 'body');
-	$time = date('U');
-	$addr = inet_pton($_SERVER['REMOTE_ADDR']);
-	$slug = filter_input(INPUT_POST, 'slug');
-	$image_hash = filter_input(INPUT_POST, 'image_hash');
-
-	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_SLUG]])) {
-		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
-		exit('Invalid page slug; must be CamelCase123.');
-	}
-
-	$state->pdo->beginTransaction();
-
-	$image_file = $_FILES['image_data'];
-	if (file_exists($image_file['tmp_name']) && is_uploaded_file($image_file['tmp_name'])) {
-		if ($image_file['error'] > UPLOAD_ERR_OK) {
-			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
-			exit('File too big; must be less than 100KB.');
-		}
-
-		$image_file_type = mime_content_type($image_file['tmp_name']);
-		if (extension_loaded('gd')) {
-			switch ($image_file_type) {
-			case 'image/jpeg':
-				$image = imagecreatefromjpeg($image_file['tmp_name']);
-				break;
-			case 'image/png':
-				$image = imagecreatefrompng($image_file['tmp_name']);
-				imagepalettetotruecolor($image);
-				imagealphablending($image, true);
-				imagesavealpha($image, true);
-				break;
-			case 'image/webp':
-				$image = imagecreatefromwebp($image_file['tmp_name']);
-				break;
-			default:
-				header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
-				exit('Only JPG, PNG, WEBP are accepted.');
-			}
-
-			$image_width = imagesx($image);
-			if ($image_width > 470) {
-				$image = imagescale($image, 470);
-				$image_width = imagesx($image);
-			}
-			$image_height = imagesy($image);
-
-			if ($image_file_type != 'image/webp') {
-				$image_file_type = 'image/webp';
-				$image_temp_name = $image_file['tmp_name'] . '.webp';
-				imagewebp($image, $image_temp_name, 84);
-			} else {
-				$image_temp_name = $image_file['tmp_name'];
-			}
-
-			$image_file_size = filesize($image_temp_name);
-		} elseif (starts_with($image_file_type, 'image/')) {
-			$image_temp_name = $image_file['tmp_name'];
-			$image_file_size = $image_file['size'];
-		} else {
-			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
-			exit('File is not an image; MIME type must be image/*.');
-		}
-
-		if ($image_file_size > 100000) {
-			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
-			exit('File too big; must be less than 100KB.');
-		}
-
-		$statement = $state->pdo->prepare('
-			INSERT OR IGNORE INTO images (hash, page_slug, content_type, time_created, remote_addr, image_data, image_width, image_height, file_size, file_name)
-			VALUES (:hash, :page_slug, :content_type, :time_created, :remote_addr, :image_data, :image_width, :image_height, :file_size, :file_name)
-		;');
-
-		$image_hash = sha1_file($image_temp_name);
-		$file = fopen($image_temp_name, 'rb');
-
-		$statement->bindParam('hash', $image_hash, PDO::PARAM_STR);
-		$statement->bindParam('page_slug', $slug, PDO::PARAM_STR);
-		$statement->bindParam('content_type', $image_file_type, PDO::PARAM_STR);
-		$statement->bindParam('time_created', $time, PDO::PARAM_INT);
-		$statement->bindParam('remote_addr', $addr, PDO::PARAM_STR);
-		$statement->bindParam('image_data', $file, PDO::PARAM_LOB);
-		$statement->bindParam('image_width', $image_width, PDO::PARAM_INT);
-		$statement->bindParam('image_height', $image_height, PDO::PARAM_INT);
-		$statement->bindParam('file_size', $image_file_size, PDO::PARAM_INT);
-		$statement->bindParam('file_name', $image_file['name'], PDO::PARAM_STR);
-
-		if (!$statement->execute()) {
-			exit('Unable to upload the image.');
-		}
-	} elseif (empty($image_hash)) {
-		$image_hash = null;
-	} elseif (!filter_var($image_hash, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_HASH_SHA1]])) {
-		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
-		exit('Invalid image_hash; must be SHA1 or empty.');
-	}
-
-	$statement = $state->pdo->prepare('
-		INSERT INTO revisions (slug, body, time_created, remote_addr, image_hash)
-		VALUES (:slug, :body, :time, :addr, :image_hash)
-	;');
-
-	$statement->bindParam('slug', $slug, PDO::PARAM_STR);
-	$statement->bindParam('body', $body, PDO::PARAM_STR);
-	$statement->bindParam('time', $time, PDO::PARAM_INT);
-	$statement->bindParam('addr', $addr, PDO::PARAM_STR);
-	$statement->bindParam('image_hash', $image_hash, PDO::PARAM_STR);
-
-	if ($statement->execute()) {
-		$state->pdo->commit();
-		$_SESSION['revision_created'] = true;
-		header("Location: ?$slug", true, 303);
-		exit;
-	}
-
-	exit("Unable to create a new revision of $slug.");
-}
-
-// Rendering templates
+// Rendering templates.
 
 function render_viewer()
 { ?>
