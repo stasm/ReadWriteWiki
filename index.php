@@ -90,8 +90,8 @@ class Change
 	public function DiffToHtml()
 	{
 		$diff = diff(
-				preg_split('/(\s+)/', htmlspecialchars($this->prev_body), -1, PREG_SPLIT_DELIM_CAPTURE),
-				preg_split('/(\s+)/', htmlspecialchars($this->body), -1, PREG_SPLIT_DELIM_CAPTURE));
+				preg_split('/(\s+)/', htmlspecialchars($this->prev_body ?: ''), -1, PREG_SPLIT_DELIM_CAPTURE),
+				preg_split('/(\s+)/', htmlspecialchars($this->body ?: ''), -1, PREG_SPLIT_DELIM_CAPTURE));
 		$ret = '';
 		foreach ($diff as $k) {
 			if (is_array($k)) {
