@@ -403,7 +403,6 @@ case 'GET':
 		}
 		break;
 	case 'image':
-		$state->render_mode = 'image';
 		if ($id) {
 			view_image_at_revision($state, $slug, $id);
 		} else {
@@ -430,7 +429,7 @@ case 'POST':
 	$image_hash = filter_input(INPUT_POST, 'image_hash');
 
 	if (!filter_var($slug, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_PAGE_SLUG]])) {
-		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
 		exit('Invalid page slug; must be CamelCase123.');
 	}
 
@@ -439,7 +438,7 @@ case 'POST':
 	$image_file = $_FILES['image_data'];
 	if (file_exists($image_file['tmp_name']) && is_uploaded_file($image_file['tmp_name'])) {
 		if ($image_file['error'] > UPLOAD_ERR_OK) {
-			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
 			exit('File too big; must be less than 100KB.');
 		}
 
@@ -459,7 +458,7 @@ case 'POST':
 				$image = imagecreatefromwebp($image_file['tmp_name']);
 				break;
 			default:
-				header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+				header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
 				exit('Only JPG, PNG, WEBP are accepted.');
 			}
 
@@ -483,12 +482,12 @@ case 'POST':
 			$image_temp_name = $image_file['tmp_name'];
 			$image_file_size = $image_file['size'];
 		} else {
-			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
 			exit('File is not an image; MIME type must be image/*.');
 		}
 
 		if ($image_file_size > 100000) {
-			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
 			exit('File too big; must be less than 100KB.');
 		}
 
@@ -517,7 +516,7 @@ case 'POST':
 	} elseif (empty($image_hash)) {
 		$image_hash = null;
 	} elseif (!filter_var($image_hash, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => RE_HASH_SHA1]])) {
-		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request', true, 400);
+		header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
 		exit('Invalid image_hash; must be SHA1 or empty.');
 	}
 
@@ -1087,7 +1086,9 @@ EOF;
 }
 
 function render_invalid_slug($slug)
-{ ?>
+{
+	header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
+?>
 	<article class="meta" style="background:mistyrose">
 		<h1>Invalid Page Name </h1>
 		<p><?=htmlspecialchars($slug)?> is not a valid page name.</p>
@@ -1101,7 +1102,9 @@ function render_invalid_slug($slug)
 <?php }
 
 function render_invalid_revision($slug, $id)
-{ ?>
+{
+	header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
+?>
 	<article class="meta" style="background:mistyrose">
 		<h1>Invalid Revision</h1>
 		<p><?=htmlspecialchars($slug)?>[<?=htmlspecialchars($id)?>] is not a valid revision.</p>
@@ -1115,7 +1118,9 @@ function render_invalid_revision($slug, $id)
 <?php }
 
 function render_invalid_action($slug, $action)
-{ ?>
+{
+	header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
+?>
 	<article class="meta" style="background:mistyrose">
 		<h1>Invalid Action</h1>
 		<p><?=htmlspecialchars($action)?> is not a valid action name.</p>
@@ -1129,7 +1134,9 @@ function render_invalid_action($slug, $action)
 <?php }
 
 function render_invalid_offset($slug, $p)
-{ ?>
+{
+	header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
+?>
 	<article class="meta" style="background:mistyrose">
 		<h1>Invalid Range</h1>
 		<p><?=htmlspecialchars($slug)?>[<?=htmlspecialchars($p)?>] is not a valid range offset.</p>
@@ -1143,7 +1150,9 @@ function render_invalid_offset($slug, $p)
 <?php }
 
 function render_invalid_address($slug, $ip = null)
-{ ?>
+{
+	header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
+?>
 	<article class="meta" style="background:mistyrose">
 		<h1>Invalid Address</h1>
 		<p><?=htmlspecialchars($ip)?> is not a valid IP address.</p>
@@ -1157,7 +1166,9 @@ function render_invalid_address($slug, $ip = null)
 <?php }
 
 function render_page_not_found($slug)
-{ ?>
+{
+	header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
+?>
 	<article class="meta" style="background:mistyrose">
 		<h1>Page Not Found</h1>
 		<p><?=$slug?> doesn't exist yet. <a href="?<?=$slug?>=edit">Create?</a></p>
@@ -1173,7 +1184,9 @@ function render_page_not_found($slug)
 <?php }
 
 function render_revision_not_found($slug, $id)
-{ ?>
+{
+	header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
+?>
 	<article class="meta" style="background:mistyrose">
 		<h1>Revision Not Found</h1>
 		<p><?=$slug?>[<?=$id?>] doesn't exist.</p>
@@ -1191,7 +1204,9 @@ function render_revision_not_found($slug, $id)
 <?php }
 
 function render_image_not_found($slug, $id = null)
-{ ?>
+{
+	header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
+?>
 	<article class="meta" style="background:mistyrose">
 	<?php if ($id): ?>
 		<h1>Image Not Found</h1>
