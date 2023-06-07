@@ -25,9 +25,15 @@ class State
 	public $render_mode = 'html';
 	public $title;
 
+	private $page_exists_stmt;
+
 	public function __construct()
 	{
 		$this->pdo = new PDO('sqlite:./' . DB_NAME);
+		$this->page_exists_stmt = $this->pdo->prepare('
+			SELECT 1 FROM revisions WHERE slug = ? LIMIT 1
+		;');
+
 
 		if (isset($_SESSION['revision_created'])) {
 			$this->revision_created = $_SESSION['revision_created'];
@@ -54,12 +60,8 @@ class State
 			return true;
 		}
 
-		$statement = $this->pdo->prepare('
-			SELECT 1 FROM latest WHERE slug = ?
-		;');
-
-		$statement->execute(array($slug));
-		return (bool)$statement->fetch();
+		$this->page_exists_stmt->execute(array($slug));
+		return (bool)$this->page_exists_stmt->fetchColumn();
 	}
 }
 
