@@ -24,10 +24,6 @@ CREATE TABLE IF NOT EXISTS "images" (
 	"page_slug"	TEXT NOT NULL
 );
 
-CREATE VIEW changelog AS
-SELECT id, slug, body, LENGTH(body) AS size, time_created, remote_addr, image_hash
-FROM revisions;
-
 CREATE VIEW latest AS
 SELECT MAX(id) AS id, slug, body, time_created, remote_addr, image_hash
 FROM revisions

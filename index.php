@@ -72,21 +72,16 @@ class Change
 	public $slug;
 	public $date_created;
 	public $remote_ip;
-	public $size;
-	public $delta;
 	public $body;
 	public $prev_body;
 
 	private $time_created;
 	private $remote_addr;
-	private $prev_size;
 
 	public function __construct()
 	{
 		$this->date_created = DateTime::createFromFormat('U', $this->time_created);
-		$this->delta = $this->size - $this->prev_size;
 		$this->remote_ip = inet_ntop($this->remote_addr);
-
 	}
 
 	public function DiffToHtml()
@@ -699,11 +694,10 @@ function view_history($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare('
 		SELECT
-			slug, id, time_created, remote_addr, size, body,
+			slug, id, time_created, remote_addr, body,
 			LEAD(id, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_id,
-			LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size,
 			LEAD(body, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_body
-		FROM changelog
+		FROM revisions
 		WHERE slug = ?' . ($id ? ' AND id <= ?' : '') . '
 		ORDER BY id DESC
 	;');
@@ -723,11 +717,10 @@ function view_diff_at_revision($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare('
 		SELECT
-			slug, id, time_created, remote_addr, size, body,
+			slug, id, time_created, remote_addr, body,
 			LEAD(id, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_id,
-			LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size,
 			LEAD(body, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_body
-		FROM changelog
+		FROM revisions
 		WHERE slug = ?' . ($id ? ' AND id <= ?' : '') . '
 		ORDER BY id DESC
 		LIMIT 1
@@ -771,11 +764,10 @@ function view_recent_changes($state, $p = 0)
 	$limit = 25;
 	$statement = $state->pdo->prepare('
 		SELECT
-			slug, id, time_created, remote_addr, size, body,
+			slug, id, time_created, remote_addr, body,
 			LEAD(id, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_id,
-			LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size,
 			LEAD(body, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_body
-		FROM changelog
+		FROM revisions
 		ORDER BY id DESC
 		LIMIT ? OFFSET ?
 	;');
@@ -797,10 +789,10 @@ function view_recent_changes_from($state, $remote_ip, $p = 0)
 	$statement = $state->pdo->prepare('
 		WITH recent_changes AS (
 			SELECT
-				id, slug, time_created, remote_addr, size,
+				slug, id, time_created, remote_addr, body,
 				LEAD(id, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_id,
-				LEAD(size, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_size
-			FROM changelog
+				LEAD(body, 1, 0) OVER (PARTITION BY slug ORDER BY id DESC) prev_body
+			FROM revisions
 		)
 		SELECT *
 		FROM recent_changes
