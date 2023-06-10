@@ -543,8 +543,10 @@ case 'POST':
 function view_page_latest($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT id, slug, body, latest.time_created, image_hash, image_width, image_height
-		FROM latest LEFT JOIN images ON image_hash = hash
+		SELECT
+			max(id) as id, slug, body, revisions.time_created,
+			image_hash, image_width, image_height
+		FROM revisions LEFT JOIN images ON image_hash = hash
 		WHERE slug = ?
 	;');
 
@@ -569,7 +571,9 @@ function view_page_latest($state, $slug)
 function view_page_at_revision($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare('
-		SELECT id, slug, body, revisions.time_created, image_hash, image_width, image_height
+		SELECT
+			id, slug, body, revisions.time_created,
+			image_hash, image_width, image_height
 		FROM revisions LEFT JOIN images ON image_hash = hash
 		WHERE slug = ? AND id = ?
 	;');
@@ -595,9 +599,9 @@ function view_page_at_revision($state, $slug, $id)
 function view_image_latest($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT hash, content_type, image_data, file_size
-		FROM images JOIN latest ON images.hash == latest.image_hash
-		WHERE latest.slug = ?
+		SELECT max(id), hash, content_type, image_data, file_size
+		FROM images JOIN revisions ON hash == image_hash
+		WHERE revisions.slug = ?
 	;');
 
 	$statement->execute(array($slug));
@@ -631,7 +635,7 @@ function view_image_at_revision($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare('
 		SELECT hash, content_type, image_data, file_size
-		FROM images JOIN revisions ON images.hash == revisions.image_hash
+		FROM images JOIN revisions ON hash == image_hash
 		WHERE revisions.slug = ? AND revisions.id = ?
 	;');
 
@@ -665,12 +669,16 @@ function view_image_at_revision($state, $slug, $id)
 function view_edit($state, $slug, $id)
 {
 	$statement = $state->pdo->prepare($id ? '
-		SELECT id, slug, body, revisions.time_created, image_hash, image_width, image_height
+		SELECT
+			id, slug, body, revisions.time_created,
+			image_hash, image_width, image_height
 		FROM revisions LEFT JOIN images ON image_hash = hash
 		WHERE slug = ? AND id = ?
 	;' : '
-		SELECT id, slug, body, latest.time_created, image_hash, image_width, image_height
-		FROM latest LEFT JOIN images ON image_hash = hash
+		SELECT
+			max(id) as id, slug, body, revisions.time_created,
+			image_hash, image_width, image_height
+		FROM revisions LEFT JOIN images ON image_hash = hash
 		WHERE slug = ?
 	;');
 
@@ -739,14 +747,10 @@ function view_diff_at_revision($state, $slug, $id)
 
 function view_backlinks($state, $slug, $id)
 {
-	$statement = $state->pdo->prepare($id ? '
+	$statement = $state->pdo->prepare('
 		SELECT DISTINCT slug
 		FROM revisions
-		WHERE slug != ? AND body LIKE ? AND id <= ?
-	;' : '
-		SELECT slug
-		FROM latest
-		WHERE slug != ? AND body LIKE ?
+		WHERE slug != ? AND body LIKE ?' . ($id ? ' AND id <= ?' : '') . '
 	;');
 
 	$statement->execute($id ? array($slug, "%$slug%", $id) : array($slug, "%$slug%"));
