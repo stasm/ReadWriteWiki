@@ -544,10 +544,12 @@ function view_page_latest($state, $slug)
 {
 	$statement = $state->pdo->prepare('
 		SELECT
-			max(id) as id, slug, body, revisions.time_created,
+			id, slug, body, revisions.time_created,
 			image_hash, image_width, image_height
 		FROM revisions LEFT JOIN images ON image_hash = hash
 		WHERE slug = ?
+		ORDER BY id DESC
+		LIMIT 1
 	;');
 
 	$statement->execute(array($slug));
@@ -599,9 +601,11 @@ function view_page_at_revision($state, $slug, $id)
 function view_image_latest($state, $slug)
 {
 	$statement = $state->pdo->prepare('
-		SELECT max(id), hash, content_type, image_data, file_size
+		SELECT hash, content_type, image_data, file_size
 		FROM images JOIN revisions ON hash == image_hash
 		WHERE revisions.slug = ?
+		ORDER BY id DESC
+		LIMIT 1
 	;');
 
 	$statement->execute(array($slug));
@@ -676,10 +680,12 @@ function view_edit($state, $slug, $id)
 		WHERE slug = ? AND id = ?
 	;' : '
 		SELECT
-			max(id) as id, slug, body, revisions.time_created,
+			id, slug, body, revisions.time_created,
 			image_hash, image_width, image_height
 		FROM revisions LEFT JOIN images ON image_hash = hash
 		WHERE slug = ?
+		ORDER BY id DESC
+		LIMIT 1
 	;');
 
 	$statement->execute($id ? array($slug, $id) : array($slug));
