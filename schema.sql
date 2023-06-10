@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS "revisions" (
 	"time_created"	INTEGER NOT NULL,
 	"remote_addr"	BLOB NOT NULL,
 	"body"	TEXT,
-	"image_hash"	TEXT,
+	"image_hash"	TEXT
 );
 
 CREATE INDEX IF NOT EXISTS "slugs" ON "revisions" (
@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS "images" (
 	"remote_addr"	blob NOT NULL,
 	"content_type"	text NOT NULL,
 	"image_data"	blob NOT NULL,
+	"image_width"	INTEGER,
+	"image_height"	INTEGER,
 	"file_size"	INTEGER NOT NULL,
 	"file_name"	TEXT NOT NULL,
 	"page_slug"	TEXT NOT NULL
