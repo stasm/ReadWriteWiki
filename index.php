@@ -1,5 +1,5 @@
 <?php
-@include('../config.php');
+@include('./config.php');
 defined('DB_NAME') or define('DB_NAME', 'wiki.db');
 defined('MAIN_PAGE') or define('MAIN_PAGE', 'HomePage');
 defined('HELP_PAGE') or define('HELP_PAGE', 'WikiHelp');
