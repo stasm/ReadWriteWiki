@@ -326,6 +326,7 @@ switch (strtoupper($_SERVER['REQUEST_METHOD'])) {
 case 'GET':
 	if (empty($_GET)) {
 		header('Location: ?' . MAIN_PAGE, true, 303);
+		exit;
 	}
 
 	$slug = filter_input(INPUT_GET, 'slug');
