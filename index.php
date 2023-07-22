@@ -223,7 +223,7 @@ class Revision
 
 			if (preg_match(RE_FIGURE_IMAGE, $line, $matches)) {
 				$slug = $matches['slug'];
-				yield "<figure><img src=\"?slug=$slug&action=image\" alt=\"$slug\" loading=lazy></figure>";
+				yield "<figure><a href=\"?$slug\"><img src=\"?slug=$slug&action=image\" alt=\"$slug\" loading=lazy></a></figure>";
 				continue;
 			}
 
