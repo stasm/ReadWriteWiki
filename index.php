@@ -287,12 +287,7 @@ class Revision
 
 					$href = "?$slug";
 					if ($action = $matches["action"]) {
-						if ($action == 'image') {
-							$href = "?slug=$slug&action=image";
-							return "<img src=\"$href\" alt=\"$slug\" loading=lazy>";
-						} else {
-							$href .= "=$action";
-						}
+						$href .= "=$action";
 					}
 
 					if ($title = $matches["title"]) {
