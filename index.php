@@ -110,11 +110,11 @@ class Change
 		$i = 0;
 		foreach ($diff as $k) {
 			if (is_array($k)) {
-				$d += count($k['d']);
-				$i += count($k['i']);
+				$d += count(array_filter(array_map('trim', $k['d'])));
+				$i += count(array_filter(array_map('trim', $k['i'])));
 			}
 		}
-		return [-ceil($d / 2), ceil($i / 2)];
+		return [-$d, $i];
 	}
 }
 
