@@ -527,7 +527,11 @@ case 'POST':
 	if ($statement->execute()) {
 		$state->pdo->commit();
 		$_SESSION['revision_created'] = true;
-		header("Location: ?$slug", true, 303);
+		if (USE_MULTICOLUMN) {
+			header("Location: ?slug=$slug", true, 303);
+		} else {
+			header("Location: ?$slug", true, 303);
+		}
 		exit;
 	}
 
