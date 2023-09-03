@@ -6,6 +6,7 @@ defined('HELP_PAGE') or define('HELP_PAGE', 'WikiHelp');
 defined('RECENT_CHANGES') or define('RECENT_CHANGES', 'RecentChanges');
 defined('CACHE_MAX_AGE') or define('CACHE_MAX_AGE', 60 * 10);
 defined('USE_MULTICOLUMN') or define('USE_MULTICOLUMN', true);
+defined('IMAGE_MAX_BYTES') or define('IMAGE_MAX_BYTES', 102_400);
 
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
@@ -431,8 +432,9 @@ case 'POST':
 	$image_file = $_FILES['image_data'];
 	if (file_exists($image_file['tmp_name']) && is_uploaded_file($image_file['tmp_name'])) {
 		if ($image_file['error'] > UPLOAD_ERR_OK) {
+			// File is larger than php.ini's upload_max_filesize.
 			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
-			exit('File too big; must be less than 100KB.');
+			exit('File too big; max allowed is ' . floor(IMAGE_MAX_BYTES / 1024) . 'kb.');
 		}
 
 		$image_file_type = mime_content_type($image_file['tmp_name']);
@@ -479,9 +481,10 @@ case 'POST':
 			exit('File is not an image; MIME type must be image/*.');
 		}
 
-		if ($image_file_size > 100000) {
+		if ($image_file_size > IMAGE_MAX_BYTES) {
+			// File is larger than our custom limit.
 			header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
-			exit('File too big; must be less than 100KB.');
+			exit('File too big; max allowed is ' . floor(IMAGE_MAX_BYTES / 1024) . 'kb.');
 		}
 
 		$statement = $state->pdo->prepare('
