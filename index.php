@@ -6,7 +6,8 @@ defined('HELP_PAGE') or define('HELP_PAGE', 'WikiHelp');
 defined('RECENT_CHANGES') or define('RECENT_CHANGES', 'RecentChanges');
 defined('CACHE_MAX_AGE') or define('CACHE_MAX_AGE', 60 * 10);
 defined('USE_MULTICOLUMN') or define('USE_MULTICOLUMN', true);
-defined('IMAGE_MAX_BYTES') or define('IMAGE_MAX_BYTES', 102_400);
+defined('IMAGE_MAX_WIDTH') or define('IMAGE_MAX_WIDTH', 1024);
+defined('IMAGE_MAX_BYTES') or define('IMAGE_MAX_BYTES', 100 * 1024);
 
 const AS_DATE = 'Y-m-d';
 const AS_TIME = 'H:i';
@@ -458,8 +459,8 @@ case 'POST':
 			}
 
 			$image_width = imagesx($image);
-			if ($image_width > 470) {
-				$image = imagescale($image, 470);
+			if ($image_width > IMAGE_MAX_WIDTH) {
+				$image = imagescale($image, IMAGE_MAX_WIDTH);
 				$image_width = imagesx($image);
 			}
 			$image_height = imagesy($image);
@@ -1247,7 +1248,15 @@ $page->body
 }
 
 function render_latest($page, $state)
-{ ?>
+{
+	if (USE_MULTICOLUMN && $page->image_hash) {
+		$img_width = min($page->image_width, 470);
+		$img_height = min($page->image_height, floor(470 * $page->image_height / $page->image_width));
+	} else {
+		$img_width = $page->image_width;
+		$img_height = $page->image_height;
+	}
+?>
 	<article>
 	<?php if ($state->revision_created): ?>
 		<header class="meta" style="background:cornsilk">
@@ -1262,7 +1271,7 @@ function render_latest($page, $state)
 		</h1>
 
 	<?php if ($page->image_hash): ?>
-		<figure><img src="?slug=<?=$page->slug?>&action=image" width="<?=$page->image_width?>" height="<?=$page->image_height?>"></figure>
+		<figure><img src="?slug=<?=$page->slug?>&action=image" width="<?=$img_width?>" height="<?=$img_height?>"></figure>
 	<?php endif ?>
 
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
@@ -1289,7 +1298,15 @@ function render_latest($page, $state)
 <?php }
 
 function render_revision($page)
-{ ?>
+{
+	if (USE_MULTICOLUMN && $page->image_hash) {
+		$img_width = min($page->image_width, 470);
+		$img_height = min($page->image_height, floor(470 * $page->image_height / $page->image_width));
+	} else {
+		$img_width = $page->image_width;
+		$img_height = $page->image_height;
+	}
+?>
 	<article style="background:honeydew">
 		<h1>
 			<a href="?<?=$page->slug?>">
@@ -1298,7 +1315,7 @@ function render_revision($page)
 		</h1>
 
 	<?php if ($page->image_hash): ?>
-		<figure><img src="?slug=<?=$page->slug?>&id=<?=$page->id?>&action=image" width="<?=$page->image_width?>" height="<?=$page->image_height?>"></figure>
+		<figure><img src="?slug=<?=$page->slug?>&id=<?=$page->id?>&action=image" width="<?=$img_width?>" height="<?=$img_height?>"></figure>
 	<?php endif ?>
 
 	<?php foreach($page->IntoHtml() as $elem): ?><?=$elem?><?php endforeach ?>
@@ -1327,7 +1344,15 @@ function render_revision($page)
 <?php }
 
 function render_edit($page)
-{ ?>
+{
+	if (USE_MULTICOLUMN && $page->image_hash) {
+		$img_width = min($page->image_width, 470);
+		$img_height = min($page->image_height, floor(470 * $page->image_height / $page->image_width));
+	} else {
+		$img_width = $page->image_width;
+		$img_height = $page->image_height;
+	}
+?>
 	<article style="background:cornsilk">
 		<h1 class="meta">
 			Edit <a href="?<?=$page->slug?>">
@@ -1340,7 +1365,7 @@ function render_edit($page)
 			<input type="hidden" name="image_hash" value="<?=$page->image_hash?>">
 
 		<?php if ($page->image_hash): ?>
-			<figure><img src="?slug=<?=$page->slug?>&id=<?=$page->id?>&action=image" width="<?=$page->image_width?>" height="<?=$page->image_height?>"></figure>
+			<figure><img src="?slug=<?=$page->slug?>&id=<?=$page->id?>&action=image" width="<?=$img_width?>" height="<?=$img_height?>"></figure>
 		<?php endif ?>
 			<input type="file" name="image_data" accept="image/*" onchange="let size_kb = this.files[0].size / 1024; this.nextElementSibling.textContent = new Intl.NumberFormat('en', {style: 'unit', unit: 'kilobyte', maximumFractionDigits: 1}).format(size_kb);"><small></small>
 
